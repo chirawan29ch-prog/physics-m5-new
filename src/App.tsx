@@ -154,6 +154,35 @@ function playAirdropSound(){
   }catch(e){}
 }
 
+function playAirdropSoundEpic(){
+  try{
+    const ctx=new(window.AudioContext||(window as any).webkitAudioContext)();
+    // เสียง whoosh ตก
+    const buf=ctx.createBuffer(1,ctx.sampleRate*.5,ctx.sampleRate);
+    const data=buf.getChannelData(0);
+    for(let i=0;i<data.length;i++) data[i]=(Math.random()*2-1)*Math.exp(-i/data.length*5);
+    const src=ctx.createBufferSource();
+    src.buffer=buf;
+    const g1=ctx.createGain();
+    src.connect(g1);g1.connect(ctx.destination);
+    g1.gain.setValueAtTime(.15,ctx.currentTime);
+    src.start();
+
+    // เสียง chord ชนะ
+    [261,329,392,523,659,784,1047].forEach((f,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=f;
+      o.type=i<3?"triangle":"sine";
+      const t=ctx.currentTime+.8+i*.08;
+      g.gain.setValueAtTime(0,t);
+      g.gain.linearRampToValueAtTime(i<3?.25:.2,t+.06);
+      g.gain.exponentialRampToValueAtTime(.001,t+.6);
+      o.start(t);o.stop(t+.7);
+    });
+  }catch(e){}
+}
+
 // ─────────────────────────────────────────────
 // VENICE BACKGROUND (สว่าง + อบอุ่น)
 // ─────────────────────────────────────────────
@@ -369,23 +398,124 @@ function GradeTable(){
 // AIRDROP POPUP
 // ─────────────────────────────────────────────
 function AirdropPopup({airdrop,onClaim}){
-  useEffect(()=>{playAirdropSound();},[]);
+  const [phase,setPhase]=useState(0); // 0=falling, 1=landed, 2=open
+  useEffect(()=>{
+    playAirdropSoundEpic();
+    setTimeout(()=>setPhase(1),800);
+    setTimeout(()=>setPhase(2),1400);
+  },[]);
+
   return(
-    <div className="overlay" style={{zIndex:2000}}>
-      <div className="air-in" style={{textAlign:"center",maxWidth:380,width:"100%"}}>
-        <div style={{position:"relative",display:"inline-block",marginBottom:16}}>
-          {Array.from({length:8},(_,i)=>(
-            <div key={i} style={{position:"absolute",top:"50%",left:"50%",width:2,height:80,
-              background:`linear-gradient(to top,${airdrop.color},transparent)`,
-              transform:`rotate(${i*45}deg) translateY(-100%)`,transformOrigin:"0 0",opacity:.5}}/>
-          ))}
-          <div style={{fontSize:84,position:"relative",zIndex:1,filter:`drop-shadow(0 0 30px ${airdrop.color})`}}>{airdrop.icon}</div>
+    <div style={{position:"fixed",inset:0,zIndex:9999,overflow:"hidden",pointerEvents:"auto"}}>
+      {/* Dark overlay */}
+      <div style={{position:"absolute",inset:0,background:"rgba(0,0,0,.85)",backdropFilter:"blur(8px)"}}/>
+
+      {/* ไฟพุ่งจากทุกทิศ */}
+      {Array.from({length:16},(_,i)=>(
+        <div key={i} style={{
+          position:"absolute",
+          top:"50%",left:"50%",
+          width:3,
+          height:phase>=1?`${120+Math.random()*80}px`:"0px",
+          background:`linear-gradient(to top,${airdrop.color},transparent)`,
+          transform:`rotate(${i*22.5}deg) translateY(-100%)`,
+          transformOrigin:"0 0",
+          transition:"height .6s ease",
+          opacity:.7,
+          boxShadow:`0 0 8px ${airdrop.color}`,
+        }}/>
+      ))}
+
+      {/* Particle sparks */}
+      {phase>=1&&Array.from({length:20},(_,i)=>(
+        <div key={i} style={{
+          position:"absolute",
+          top:`${20+Math.random()*60}%`,
+          left:`${10+Math.random()*80}%`,
+          width:4,height:4,
+          borderRadius:"50%",
+          background:airdrop.color,
+          animation:`pulse ${.5+Math.random()*.8}s ease-in-out infinite`,
+          animationDelay:`${Math.random()*.5}s`,
+          boxShadow:`0 0 8px ${airdrop.color}`,
+        }}/>
+      ))}
+
+      {/* Main content */}
+      <div style={{
+        position:"absolute",inset:0,
+        display:"flex",alignItems:"center",justifyContent:"center",
+        padding:20,
+      }}>
+        <div style={{
+          textAlign:"center",maxWidth:420,width:"100%",
+          transform:phase>=2?"scale(1) translateY(0)":"scale(.6) translateY(-60px)",
+          opacity:phase>=2?1:0,
+          transition:"all .5s cubic-bezier(.34,1.56,.64,1)",
+        }}>
+          {/* Glow ring */}
+          <div style={{
+            position:"relative",display:"inline-block",
+            marginBottom:20,
+          }}>
+            <div style={{
+              position:"absolute",inset:-20,
+              borderRadius:"50%",
+              background:`radial-gradient(circle,${airdrop.color}44 0%,transparent 70%)`,
+              animation:"pulse 1.5s ease-in-out infinite",
+            }}/>
+            <div style={{
+              fontSize:100,
+              filter:`drop-shadow(0 0 40px ${airdrop.color}) drop-shadow(0 0 20px ${airdrop.color})`,
+              animation:"float 2s ease-in-out infinite",
+              position:"relative",zIndex:1,
+            }}>{airdrop.icon}</div>
+          </div>
+
+          <div className="mono" style={{
+            fontSize:13,color:"var(--gold)",letterSpacing:6,marginBottom:8,
+            animation:"blink .8s ease-in-out infinite",
+          }}>📦 AIRDROP INCOMING!</div>
+
+          <div className="cond" style={{
+            fontSize:44,fontWeight:900,
+            color:airdrop.color,
+            marginBottom:10,
+            textShadow:`0 0 40px ${airdrop.color}, 0 0 80px ${airdrop.color}55`,
+            lineHeight:1,
+          }}>{airdrop.name}</div>
+
+          <div className="badge" style={{
+            background:`${airdrop.color}20`,
+            border:`2px solid ${airdrop.color}`,
+            color:airdrop.color,
+            fontSize:14,padding:"6px 20px",
+            marginBottom:16,
+            display:"inline-block",
+            boxShadow:`0 0 16px ${airdrop.color}44`,
+          }}>★ {airdrop.rarity}</div>
+
+          {airdrop.note&&(
+            <div style={{
+              color:"#fff",fontSize:16,
+              fontStyle:"italic",marginBottom:20,
+              background:"rgba(255,255,255,.08)",
+              padding:"10px 20px",borderRadius:10,
+              border:`1px solid ${airdrop.color}33`,
+            }}>
+              💬 "{airdrop.note}"
+            </div>
+          )}
+
+          <button className="btn btn-gold" onClick={onClaim} style={{
+            fontSize:20,padding:"16px 56px",
+            animation:"glow 1.5s ease-in-out infinite",
+            boxShadow:`0 0 30px rgba(212,168,67,.5)`,
+            transform:"scale(1.05)",
+          }}>
+            ✅ รับรางวัล!
+          </button>
         </div>
-        <div className="cond" style={{fontSize:13,color:"var(--muted2)",letterSpacing:4,marginBottom:4}}>📦 AIRDROP INCOMING!</div>
-        <div className="cond" style={{fontSize:38,fontWeight:900,color:airdrop.color,marginBottom:8,textShadow:`0 0 28px ${airdrop.color}`}}>{airdrop.name}</div>
-        <div className="badge" style={{background:`${airdrop.color}18`,border:`1px solid ${airdrop.color}55`,color:airdrop.color,fontSize:13,padding:"5px 14px",marginBottom:16}}>★ {airdrop.rarity}</div>
-        {airdrop.note&&<div style={{color:"var(--muted2)",fontSize:14,fontStyle:"italic",marginBottom:16}}>"{airdrop.note}"</div>}
-        <button className="btn btn-gold" onClick={onClaim} style={{fontSize:18,padding:"14px 48px",animation:"glow 2s ease-in-out infinite"}}>✅ รับรางวัล</button>
       </div>
     </div>
   );
@@ -800,30 +930,132 @@ function StudentResources({resources}){
 // ─────────────────────────────────────────────
 // STUDENT: RANKING
 // ─────────────────────────────────────────────
-function RankingPage({students,myId}){
-  const sorted=[...students].sort((a,b)=>b.xp-a.xp);
-  const medals=["🥇","🥈","🥉"];
+function RankingPage({students, myId}){
+  const me = students.find(s=>s.id===myId);
+  if(!me) return null;
+  const rank = getRank(me.xp);
+  const nextRank = XP_RANKS.slice().reverse().find(r=>r.minXP>me.xp);
+  const xpToNext = nextRank ? nextRank.minXP - me.xp : 0;
+  const pctToNext = nextRank ? Math.min(100,Math.round(((me.xp - (XP_RANKS.find(r=>r.minXP<=me.xp&&(!nextRank||r.minXP<nextRank.minXP))?.minXP||0)) / (nextRank.minXP - (XP_RANKS.find(r=>r.minXP<=me.xp&&r.minXP<nextRank.minXP)?.minXP||0)))*100)) : 100;
+  const totalScore = Math.min(100, Math.round(me.xp/25));
+  const MAX_HALF=35,MAX_MID=15,MAX_FINAL=15;
+  const aList = [];
+  const half = 0;
+  function earnedXP(list){return list.reduce((s,a)=>{const sub=me.submissions?.[a.id];return s+(sub?sub.xpEarned||0:0);},0);}
+  const midterm = me.midterm;
+  const final_ = me.final;
+  const submitted = Object.keys(me.submissions||{}).length;
+
   return(
-    <div className="fade-up" style={{padding:20,maxWidth:900,margin:"0 auto"}}>
-      <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:3,marginBottom:20}}>LEADERBOARD</div>
-      {sorted.map((s,i)=>{const r=getRank(s.xp);const isMe=s.id===myId;return(
-        <div key={s.id} className="card slide-r" style={{display:"flex",alignItems:"center",gap:16,marginBottom:10,borderColor:isMe?"rgba(212,168,67,.5)":i===0?"rgba(212,168,67,.22)":"var(--border)",background:isMe?"rgba(212,168,67,.06)":"var(--bg2)",animationDelay:`${i*.05}s`}}>
-          <div style={{width:44,textAlign:"center"}}>{i<3?<span style={{fontSize:26}}>{medals[i]}</span>:<span className="mono" style={{fontSize:20,color:"var(--muted)"}}>#{i+1}</span>}</div>
-          <div style={{fontSize:36}}>{s.avatar}</div>
-          <div style={{flex:1,minWidth:0}}>
-            <div style={{display:"flex",gap:8,alignItems:"center",marginBottom:6,flexWrap:"wrap"}}>
-              <span style={{fontSize:15,fontWeight:600,color:isMe?"var(--gold)":"#fff"}}>{s.name}</span>
-              {isMe&&<span className="badge" style={{background:"rgba(212,168,67,.15)",border:"1px solid rgba(212,168,67,.4)",color:"var(--gold)"}}>YOU</span>}
+    <div className="fade-up" style={{padding:20,maxWidth:700,margin:"0 auto"}}>
+      <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:3,marginBottom:20}}>📊 สถิติของฉัน</div>
+
+      {/* Stat cards */}
+      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr 1fr",gap:10,marginBottom:16}}>
+        <div className="card" style={{textAlign:"center",padding:14}}>
+          <div style={{fontSize:12,color:"var(--muted)",marginBottom:6}}>XP รวม</div>
+          <div className="mono" style={{fontSize:26,fontWeight:700,color:"var(--gold2)"}}>{me.xp.toLocaleString()}</div>
+        </div>
+        <div className="card" style={{textAlign:"center",padding:14}}>
+          <div style={{fontSize:12,color:"var(--muted)",marginBottom:6}}>คะแนน /100</div>
+          <div className="mono" style={{fontSize:26,fontWeight:700,color:"var(--cyan)"}}>{totalScore}</div>
+        </div>
+        <div className="card" style={{textAlign:"center",padding:14}}>
+          <div style={{fontSize:12,color:"var(--muted)",marginBottom:6}}>เกรด</div>
+          <div className="mono" style={{fontSize:26,fontWeight:700,color:rank.color}}>{rank.grade}</div>
+        </div>
+        <div className="card" style={{textAlign:"center",padding:14}}>
+          <div style={{fontSize:12,color:"var(--muted)",marginBottom:6}}>แรงค์</div>
+          <div style={{fontSize:16,fontWeight:700,color:rank.color}}>{rank.icon} {rank.label}</div>
+        </div>
+      </div>
+
+      {/* Progress to next rank */}
+      <div className="card" style={{marginBottom:14}}>
+        <div style={{fontSize:13,color:"var(--muted2)",marginBottom:10}}>ความคืบหน้าสู่แรงค์ถัดไป</div>
+        <div style={{display:"flex",justifyContent:"space-between",fontSize:12,color:"var(--muted)",marginBottom:6}}>
+          <span style={{color:rank.color}}>{rank.icon} {rank.label} · {me.xp.toLocaleString()} XP</span>
+          {nextRank
+            ?<span>เป้า {nextRank.icon} {nextRank.label} · {nextRank.minXP.toLocaleString()} XP</span>
+            :<span style={{color:"var(--gold)"}}>🏆 แรงค์สูงสุดแล้ว!</span>
+          }
+        </div>
+        <div style={{height:10,background:"rgba(255,255,255,.08)",borderRadius:5,overflow:"hidden",marginBottom:8}}>
+          <div style={{width:`${pctToNext}%`,height:"100%",background:`linear-gradient(90deg,${rank.color}88,${rank.color})`,borderRadius:5,transition:"width .8s"}}/>
+        </div>
+        {nextRank&&<div style={{fontSize:12,color:"var(--muted)"}}>ต้องการอีก <span style={{color:"var(--gold)",fontWeight:600}}>{xpToNext.toLocaleString()} XP</span> เพื่อขึ้น {nextRank.label}</div>}
+      </div>
+
+      {/* คะแนน 4 ส่วน */}
+      <div className="card" style={{marginBottom:14}}>
+        <div style={{fontSize:13,color:"var(--muted2)",marginBottom:12}}>คะแนนแต่ละส่วน</div>
+        <div style={{display:"grid",gridTemplateColumns:"repeat(4,1fr)",gap:8}}>
+          {[
+            {label:"เก็บก่อนกลาง",score:Math.min(MAX_HALF,Math.round(me.xp/25*0.5)),max:MAX_HALF,color:"#a78bfa",bg:"rgba(216,180,254,.12)",border:"rgba(216,180,254,.4)"},
+            {label:"สอบกลางภาค",score:midterm,max:MAX_MID,color:"#60a5fa",bg:"rgba(147,197,253,.12)",border:"rgba(147,197,253,.4)"},
+            {label:"เก็บหลังกลาง",score:Math.min(MAX_HALF,Math.round(me.xp/25*0.5)),max:MAX_HALF,color:"#f472b6",bg:"rgba(249,168,212,.12)",border:"rgba(249,168,212,.4)"},
+            {label:"สอบปลายภาค",score:final_,max:MAX_FINAL,color:"#fbbf24",bg:"rgba(253,230,138,.1)",border:"rgba(253,230,138,.35)"},
+          ].map((s,i)=>(
+            <div key={i} style={{background:s.bg,border:`0.5px solid ${s.border}`,borderRadius:8,padding:10}}>
+              <div style={{fontSize:10,color:s.color,fontWeight:600,marginBottom:5,lineHeight:1.3}}>{s.label}</div>
+              <div style={{height:6,background:"rgba(0,0,0,.15)",borderRadius:3,marginBottom:4,overflow:"hidden"}}>
+                <div style={{width:`${s.score!==null&&s.score!==undefined?Math.round((s.score/s.max)*100):0}%`,height:"100%",background:s.color,borderRadius:3}}/>
+              </div>
+              {s.score!==null&&s.score!==undefined
+                ?<div style={{fontSize:12,color:"var(--text)",fontWeight:600}}>{s.score}/{s.max} <span style={{color:s.color,fontSize:10}}>{Math.round((s.score/s.max)*100)}%</span></div>
+                :<div style={{fontSize:11,color:"var(--muted)"}}>ยังไม่ประกาศ</div>
+              }
             </div>
-            <div style={{maxWidth:300}}><XPBar xp={s.xp} showLabel={false}/></div>
+          ))}
+        </div>
+      </div>
+
+      {/* สถิติส่งงาน */}
+      <div className="card" style={{marginBottom:14}}>
+        <div style={{fontSize:13,color:"var(--muted2)",marginBottom:12}}>สถิติการส่งงาน</div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:10}}>
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6}}>
+              <span style={{color:"var(--muted)"}}>ส่งแล้ว</span>
+              <span style={{fontWeight:600,color:"var(--green)"}}>{submitted} งาน</span>
+            </div>
+            <div style={{height:8,background:"rgba(255,255,255,.08)",borderRadius:4,overflow:"hidden"}}>
+              <div style={{width:`${submitted>0?Math.min(100,Math.round(submitted/8*100)):0}%`,height:"100%",background:"var(--green)",borderRadius:4}}/>
+            </div>
           </div>
-          <div style={{textAlign:"center"}}>
-            <div className="cond" style={{fontSize:32,fontWeight:900,color:r.color}}>{s.xp.toLocaleString()}</div>
-            <div style={{fontSize:10,color:"var(--muted)"}}>XP</div>
-            <GradeTag xp={s.xp}/>
+          <div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:6}}>
+              <span style={{color:"var(--muted)"}}>XP จากงาน</span>
+              <span style={{fontWeight:600,color:"var(--gold)"}}>{me.xp.toLocaleString()} XP</span>
+            </div>
+            <div style={{height:8,background:"rgba(255,255,255,.08)",borderRadius:4,overflow:"hidden"}}>
+              <div style={{width:`${Math.min(100,Math.round(me.xp/MAX_XP*100))}%`,height:"100%",background:"var(--gold)",borderRadius:4}}/>
+            </div>
           </div>
         </div>
-      );})}
+      </div>
+
+      {/* XP แต่ละบทเรียน */}
+      <div className="card">
+        <div style={{fontSize:13,color:"var(--muted2)",marginBottom:12}}>XP แต่ละบทเรียน</div>
+        {CHAPTERS.map(ch=>{
+          const chXP = Object.entries(me.submissions||{}).reduce((sum,[aid,sub])=>{
+            return sum + ((sub as any).xpEarned||0);
+          },0);
+          const pct = Math.min(100,Math.round(chXP/MAX_XP*100*CHAPTERS.length));
+          return(
+            <div key={ch.id} style={{marginBottom:10}}>
+              <div style={{display:"flex",justifyContent:"space-between",fontSize:13,marginBottom:4}}>
+                <span style={{color:"var(--text)"}}><span style={{marginRight:6}}>{ch.icon}</span>{ch.title}</span>
+                <span style={{fontWeight:600,color:ch.color}}>{chXP>0?chXP+" XP":"ยังไม่มี XP"}</span>
+              </div>
+              <div style={{height:6,background:"rgba(255,255,255,.08)",borderRadius:3,overflow:"hidden"}}>
+                <div style={{width:`${pct}%`,height:"100%",background:ch.color,borderRadius:3}}/>
+              </div>
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
@@ -1577,8 +1809,23 @@ function TeacherAirdrop({students,setPendingAirdrop}){
   }
   function removeFromPool(id){setPool(p=>p.filter(r=>r.id!==id));}
 
+  const [selReward,setSelReward]=useState("");
+  const [randomStudent,setRandomStudent]=useState(false);
+
   function startRoll(){
-    if(!selStu||pool.length===0)return;
+    if(pool.length===0)return;
+    // ถ้าไม่ได้เลือกนักเรียน → สุ่มนักเรียนจาก filtered
+    if(!selStu||randomStudent){
+      if(filtered.length===0)return;
+      const randStu=filtered[Math.floor(Math.random()*filtered.length)];
+      setSelStu(randStu.id);
+    }
+    // ถ้าเลือกรางวัลไว้แล้ว → ใช้รางวัลนั้นเลย ไม่สุ่ม
+    if(selReward){
+      const chosen=pool.find(r=>r.id===selReward);
+      if(chosen){setResult(chosen);return;}
+    }
+    // ไม่ได้เลือกรางวัล → สุ่มรางวัล
     setResult(null);setRolling(true);setNote("");
     let c=0;timerRef.current=setInterval(()=>{
       setRollIdx(Math.floor(Math.random()*pool.length));c++;
@@ -1689,15 +1936,20 @@ function TeacherAirdrop({students,setPendingAirdrop}){
       <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:16}}>
         <div style={{display:"flex",flexDirection:"column",gap:12}}>
           <div className="card">
-            <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,marginBottom:10}}>เลือกผู้รับ</div>
+            <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,marginBottom:10}}>🎁 เลือกรางวัล (ไม่เลือก = สุ่ม)</div>
+            <select className="input" value={selReward} onChange={e=>setSelReward(e.target.value)} style={{marginBottom:8}}>
+              <option value="">-- 🎲 สุ่มรางวัลอัตโนมัติ --</option>
+              {pool.map(r=><option key={r.id} value={r.id}>{r.icon} {r.name} · ★{r.rarity}</option>)}
+            </select>
+            <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,marginBottom:6,marginTop:4}}>เลือกผู้รับ (ไม่เลือก = สุ่มนักเรียน)</div>
             <select className="input" value={selStu} onChange={e=>setSelStu(e.target.value)}>
-              <option value="">-- เลือกนักเรียน --</option>
+              <option value="">-- 🎲 สุ่มนักเรียนอัตโนมัติ --</option>
               {filtered.map(s=><option key={s.id} value={s.id}>{s.avatar} {s.name} · {s.xp.toLocaleString()} XP</option>)}
             </select>
             {filtered.length===0&&<div style={{fontSize:12,color:"var(--red)",marginTop:8}}>⚠ ไม่มีนักเรียนในเงื่อนไขนี้</div>}
           </div>
 
-          <button className="btn btn-gold" onClick={startRoll} disabled={!selStu||rolling||pool.length===0}
+          <button className="btn btn-gold" onClick={startRoll} disabled={rolling||pool.length===0||filtered.length===0}
             style={{padding:18,fontSize:20,display:"flex",alignItems:"center",justifyContent:"center",gap:10,
               opacity:(!selStu||rolling||pool.length===0)?.4:1}}>
             {rolling?<><span style={{animation:"spin .3s linear infinite",display:"inline-block"}}>🎲</span> ROLLING...</>
@@ -1719,7 +1971,7 @@ function TeacherAirdrop({students,setPendingAirdrop}){
 
         {/* Roll display */}
         <div className="card card-gold" style={{textAlign:"center",minHeight:240,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center"}}>
-          {!rolling&&!result&&<div><div style={{fontSize:56,opacity:.2,marginBottom:8}}>📦</div><div className="mono" style={{fontSize:11,color:"var(--muted)"}}>กด ROLL เพื่อสุ่มรางวัล</div></div>}
+          {!rolling&&!result&&<div><div style={{fontSize:56,opacity:.2,marginBottom:8}}>📦</div><div className="mono" style={{fontSize:11,color:"var(--muted)",textAlign:"center",lineHeight:1.8}}>กด ROLL เพื่อ<br/>เลือกรางวัล+สุ่มนักเรียน<br/>หรือเลือกได้เองด้านซ้าย</div></div>}
           {rolling&&pool[rollIdx]&&<div>
             <div style={{fontSize:76,animation:"spin .18s linear infinite"}}>{pool[rollIdx].icon}</div>
             <div className="mono" style={{fontSize:12,color:"var(--gold)",marginTop:10,animation:"blink .4s linear infinite"}}>ROLLING...</div>
@@ -1732,6 +1984,40 @@ function TeacherAirdrop({students,setPendingAirdrop}){
             </div>
           )}
         </div>
+      </div>
+
+      {/* ── ประวัติ AIRDROP ทั้งห้อง ── */}
+      <div className="card" style={{marginTop:16}}>
+        <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:3,marginBottom:14}}>📋 ประวัติ AIRDROP ทั้งห้อง</div>
+        {students.every(s=>s.inventory.length===0)
+          ?<div style={{color:"var(--muted)",fontSize:13,textAlign:"center",padding:"20px 0"}}>ยังไม่มีประวัติ Airdrop</div>
+          :<div style={{display:"flex",flexDirection:"column",gap:8}}>
+            {students.flatMap(s=>
+              s.inventory.map((item,idx)=>({...item,studentId:s.id,studentName:s.name,studentAvatar:s.avatar,itemIdx:idx}))
+            ).sort((a,b)=>b.itemIdx-a.itemIdx).map((item,i)=>(
+              <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
+                background:`${item.color}10`,border:`1px solid ${item.color}33`,borderRadius:8}}>
+                <div style={{fontSize:28,flexShrink:0}}>{item.icon}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:13,fontWeight:600,color:"#fff"}}>{item.name}</div>
+                  <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>
+                    {item.studentAvatar} {item.studentName} · {item.receivedAt||""}
+                    {item.note&&<span style={{color:"var(--gold)",marginLeft:8}}>"{item.note}"</span>}
+                  </div>
+                </div>
+                <div className="badge" style={{background:`${item.color}18`,border:`1px solid ${item.color}44`,color:item.color,fontSize:10}}>★ {item.rarity}</div>
+                <button className="btn btn-red" onClick={()=>{
+                  if(window.confirm(`ลบ "${item.name}" ของ ${item.studentName}?`)){
+                    setStudents(prev=>prev.map(s=>s.id===item.studentId
+                      ?{...s,inventory:s.inventory.filter((_,idx2)=>idx2!==item.itemIdx)}
+                      :s
+                    ));
+                  }
+                }} style={{padding:"6px 12px",fontSize:12,flexShrink:0}}>🗑 ลบ</button>
+              </div>
+            ))}
+          </div>
+        }
       </div>
     </div>
   );
@@ -1748,14 +2034,31 @@ const GAS_URL = "https://script.google.com/macros/s/AKfycbzSILLYJdp-slFsZec0Ozp8
 
 async function gasGet(){
   try{
-    const r = await fetch(GAS_URL + "?action=getAll");
-    return await r.json();
-  }catch(e){ return null; }
+    const r = await fetch(GAS_URL + "?action=getAll", {
+      method:"GET",
+      mode:"cors",
+    });
+    if(!r.ok) throw new Error("fetch failed");
+    const data = await r.json();
+    // เซฟ backup ไว้ใน localStorage
+    try{ localStorage.setItem("pbg_backup", JSON.stringify(data)); }catch(e){}
+    return data;
+  }catch(e){
+    // ถ้า fetch ไม่ได้ ให้โหลดจาก localStorage แทน
+    try{
+      const backup = localStorage.getItem("pbg_backup");
+      if(backup) return JSON.parse(backup);
+    }catch(e2){}
+    return null;
+  }
 }
 async function gasSave(action, data){
   try{
+    // ใช้ no-cors เพื่อแก้ปัญหา CORS
     await fetch(GAS_URL, {
       method:"POST",
+      mode:"no-cors",
+      headers:{"Content-Type":"text/plain"},
       body: JSON.stringify({action, data: JSON.stringify(data)})
     });
   }catch(e){}
@@ -1770,6 +2073,16 @@ export default function App(){
   // โหลดข้อมูลจาก Google Sheets ตอนเริ่ม
   const [loaded,setLoaded]=useState(false);
   useEffect(()=>{
+    // โหลด localStorage ก่อน (เร็ว ไม่มี delay)
+    try{
+      const ls_stu = localStorage.getItem("pbg_students");
+      const ls_asn = localStorage.getItem("pbg_assignments");
+      const ls_res = localStorage.getItem("pbg_resources");
+      if(ls_stu){ const d=JSON.parse(ls_stu); if(d.length>0) setStudents(d); }
+      if(ls_asn){ const d=JSON.parse(ls_asn); if(d.length>0) setAssignments(d); }
+      if(ls_res){ const d=JSON.parse(ls_res); if(d.length>0) setResources(d); }
+    }catch(e){}
+    // แล้วค่อย fetch จาก Google Sheets (ข้อมูลล่าสุด)
     gasGet().then(data=>{
       if(data){
         if(data.students&&data.students.length>0) setStudents(data.students);
@@ -1780,10 +2093,46 @@ export default function App(){
     });
   },[]);
 
-  // เซฟข้อมูลไป Google Sheets ทุกครั้งที่เปลี่ยน
-  useEffect(()=>{ if(loaded) gasSave("saveStudents", students); },[students]);
-  useEffect(()=>{ if(loaded) gasSave("saveAssignments", assignments); },[assignments]);
-  useEffect(()=>{ if(loaded) gasSave("saveResources", resources); },[resources]);
+  // Auto-refresh ทุก 30 วินาที — นักเรียนจะเห็น Airdrop ใหม่อัตโนมัติ
+  useEffect(()=>{
+    const interval=setInterval(()=>{
+      gasGet().then(data=>{
+        if(data&&data.students&&data.students.length>0){
+          setStudents(prev=>{
+            // เช็คว่ามี airdrop ใหม่ไหม
+            const updated=data.students;
+            updated.forEach(newS=>{
+              const oldS=prev.find(s=>s.id===newS.id);
+              if(oldS&&newS.inventory.length>oldS.inventory.length){
+                // มี airdrop ใหม่ — แสดง popup
+                const newItem=newS.inventory[newS.inventory.length-1];
+                setActivePopup(newItem);
+              }
+            });
+            return updated;
+          });
+        }
+      });
+    },30000);
+    return()=>clearInterval(interval);
+  },[loaded]);
+
+  // เซฟข้อมูลไป Google Sheets + localStorage ทุกครั้งที่เปลี่ยน
+  useEffect(()=>{
+    if(!loaded) return;
+    gasSave("saveStudents", students);
+    try{ localStorage.setItem("pbg_students", JSON.stringify(students)); }catch(e){}
+  },[students]);
+  useEffect(()=>{
+    if(!loaded) return;
+    gasSave("saveAssignments", assignments);
+    try{ localStorage.setItem("pbg_assignments", JSON.stringify(assignments)); }catch(e){}
+  },[assignments]);
+  useEffect(()=>{
+    if(!loaded) return;
+    gasSave("saveResources", resources);
+    try{ localStorage.setItem("pbg_resources", JSON.stringify(resources)); }catch(e){}
+  },[resources]);
 
 
   const [page,setPage]=useState("dashboard");
