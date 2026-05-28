@@ -2008,10 +2008,15 @@ function TeacherAirdrop({students,setPendingAirdrop}){
                 <div className="badge" style={{background:`${item.color}18`,border:`1px solid ${item.color}44`,color:item.color,fontSize:10}}>★ {item.rarity}</div>
                 <button className="btn btn-red" onClick={()=>{
                   if(window.confirm(`ลบ "${item.name}" ของ ${item.studentName}?`)){
-                    setStudents(prev=>prev.map(s=>s.id===item.studentId
-                      ?{...s,inventory:s.inventory.filter((_,idx2)=>idx2!==item.itemIdx)}
-                      :s
-                    ));
+                    setStudents(prev=>{
+                      const updated=prev.map(s=>s.id===item.studentId
+                        ?{...s,inventory:s.inventory.filter((_,idx2)=>idx2!==item.itemIdx)}
+                        :s
+                      );
+                      try{ localStorage.setItem("pbg_students", JSON.stringify(updated)); }catch(e){}
+                      gasSave("saveStudents", updated);
+                      return updated;
+                    });
                   }
                 }} style={{padding:"6px 12px",fontSize:12,flexShrink:0}}>🗑 ลบ</button>
               </div>
