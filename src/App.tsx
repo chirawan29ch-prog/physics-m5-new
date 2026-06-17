@@ -852,7 +852,7 @@ function StudentDashboard({student,students,assignments,setPage,setStudents}){
 // ─────────────────────────────────────────────
 // STUDENT: ASSIGNMENTS
 // ─────────────────────────────────────────────
-function StudentAssignments({student,assignments,setStudents}){
+function StudentAssignments({student,students,assignments,setStudents}){
   const [uploadModal,setUploadModal]=useState(null);
   const [driveLink,setDriveLink]=useState("");
   function openUpload(a){setUploadModal(a);setDriveLink("");}
@@ -2367,7 +2367,7 @@ export default function App(){
         <main>
           <PageHeader page={page} setPage={setPage}/>
           {role==="student"&&page==="dashboard"    &&currentStudent&&<StudentDashboard student={currentStudent} students={students} assignments={assignments} setPage={setPage} setStudents={setStudents}/>}
-          {role==="student"&&page==="assignments"  &&currentStudent&&<StudentAssignments student={currentStudent} assignments={assignments} setStudents={setStudents}/>}
+          {role==="student"&&page==="assignments"  &&currentStudent&&<StudentAssignments student={currentStudent} students={students} assignments={assignments} setStudents={setStudents}/>}
           {role==="student"&&page==="resources"    &&<StudentResources resources={resources}/>}
           {role==="student"&&page==="ranking"      &&<RankingPage students={students} myId={userId} isTeacher={false}/>}
           {role==="student"&&page==="inventory"    &&currentStudent&&<StudentInventory student={currentStudent}/>}
