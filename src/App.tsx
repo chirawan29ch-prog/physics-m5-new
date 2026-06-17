@@ -231,20 +231,49 @@ function VeniceBackground(){
 // ─────────────────────────────────────────────
 // MINI COMPONENTS
 // ─────────────────────────────────────────────
-function XPBar({xp,maxXP=MAX_XP,color="#f5cc70",showLabel=true}){
+const RANK_BAR_COLORS:Record<string,{fill:string,glow:string,next:string}> = {
+  "IRON":      {fill:"linear-gradient(90deg,#4a5568,#718096,#a0aec0)", glow:"#9aacbf", next:"#ffb86a"},
+  "BRONZE II": {fill:"linear-gradient(90deg,#7b3a10,#c05a20,#e07a40)", glow:"#e07a40", next:"#ffb86a"},
+  "BRONZE I":  {fill:"linear-gradient(90deg,#a04a10,#ff9840,#ffcc80)", glow:"#ff9840", next:"#c8ddf0"},
+  "SILVER II": {fill:"linear-gradient(90deg,#4a6a8a,#8ab0d0,#c8ddf0)", glow:"#c8ddf0", next:"#c8ddf0"},
+  "SILVER I":  {fill:"linear-gradient(90deg,#5a7a9a,#9ac0e0,#d8eaf8)", glow:"#d8eaf8", next:"#f5cc70"},
+  "GOLD":      {fill:"linear-gradient(90deg,#c8902a,#f5cc70,#ffe89a)", glow:"#f5cc70", next:"#e0ccff"},
+  "PLATINUM":  {fill:"linear-gradient(90deg,#5a3a9a,#9a7ae0,#c8aaff)", glow:"#c8aaff", next:"#a8d8ff"},
+  "DIAMOND":   {fill:"linear-gradient(90deg,#1a4a8a,#5aaee8,#a8d8ff)", glow:"#a8d8ff", next:"#a8d8ff"},
+};
+
+function XPBar({xp,maxXP=MAX_XP,showLabel=true}){
   const pct=Math.min(100,(xp/maxXP)*100);
   const rank=getRank(xp);
+  const rc=RANK_BAR_COLORS[rank.label]||RANK_BAR_COLORS["IRON"];
+  const nextRank=XP_RANKS.slice().reverse().find(r=>r.minXP>xp);
   return(
     <div>
       {showLabel&&<div style={{display:"flex",justifyContent:"space-between",marginBottom:5,fontSize:12}}>
         <span style={{color:"var(--muted2)"}}>{rank.label}</span>
-        <span className="mono" style={{color}}>{xp.toLocaleString()} / {maxXP.toLocaleString()} XP</span>
+        <span className="mono" style={{color:rc.glow}}>{xp.toLocaleString()} / {maxXP.toLocaleString()} XP</span>
       </div>}
-      <div style={{height:10,background:"rgba(14,26,43,.8)",borderRadius:5,overflow:"hidden",border:"1px solid var(--border)"}}>
-        <div style={{width:`${pct}%`,height:"100%",background:`linear-gradient(90deg,${color}55,${color})`,transition:"width 1s ease",borderRadius:5,position:"relative"}}>
-          <div style={{position:"absolute",right:0,top:0,width:3,height:"100%",background:"rgba(255,255,255,.65)",boxShadow:`0 0 6px ${color}`}}/>
+      <div style={{display:"flex",alignItems:"center",gap:8}}>
+        {showLabel&&<div className="mono" style={{fontSize:10,color:rank.color,minWidth:14}}>{rank.icon}</div>}
+        <div style={{flex:1,position:"relative"}}>
+          <div style={{height:14,background:"rgba(14,26,43,.9)",borderRadius:7,overflow:"visible",border:"1px solid rgba(212,168,67,.18)",position:"relative"}}>
+            <div style={{width:`${pct}%`,height:"100%",background:rc.fill,borderRadius:7,transition:"width 1.2s ease",minWidth:pct>0?14:0,position:"relative"}}>
+              <div style={{position:"absolute",right:-7,top:"50%",transform:"translateY(-50%)",
+                width:18,height:18,borderRadius:"50%",
+                background:`radial-gradient(circle,#fff 0%,${rc.glow} 35%,${rc.glow}44 60%,transparent 75%)`,
+                boxShadow:`0 0 10px 4px ${rc.glow}99,0 0 22px 8px ${rc.glow}44`,
+                animation:"glowPulse 1.6s ease-in-out infinite",zIndex:2}}/>
+            </div>
+            {XP_RANKS.slice().reverse().map(r=>(
+              <div key={r.minXP} style={{position:"absolute",left:`${(r.minXP/maxXP)*100}%`,top:-2,width:1,height:18,background:"rgba(255,255,255,.15)"}}/>
+            ))}
+          </div>
         </div>
+        {showLabel&&<div className="mono" style={{fontSize:10,color:nextRank?.color||rc.next,minWidth:14}}>{nextRank?.icon||"🏁"}</div>}
       </div>
+      {showLabel&&nextRank&&<div style={{textAlign:"right",fontSize:10,color:"var(--muted)",marginTop:3}}>
+        อีก <span style={{color:rc.glow,fontWeight:700}}>{(nextRank.minXP-xp).toLocaleString()} XP</span> → {nextRank.label}
+      </div>}
     </div>
   );
 }
@@ -338,29 +367,96 @@ function GradeTable(){
 // ─────────────────────────────────────────────
 // AIRDROP POPUP
 // ─────────────────────────────────────────────
-function AirdropPopup({airdrop,onClaim}){
-  useEffect(()=>{playAirdropSound();},[]);
+function AirdropPopup({airdrop,onClaim}:{airdrop:any,onClaim:()=>void}){
+  const {canvasRef,burst}=useAirdropParticles();
+  const [show,setShow]=useState(false);
+  const [flashOpacity,setFlashOpacity]=useState(0);
+  const overlayRef=useRef<HTMLDivElement>(null);
+
+  useEffect(()=>{
+    playAirdropFX(airdrop.rarity||"COMMON");
+    // flash
+    setFlashOpacity(.6);
+    setTimeout(()=>setFlashOpacity(0),150);
+    // burst x2
+    setTimeout(()=>burst(airdrop.color||"#f5cc70",airdrop.rarity==="LEGENDARY"?110:airdrop.rarity==="EPIC"?85:60),100);
+    setTimeout(()=>setShow(true),180);
+    if(airdrop.rarity==="LEGENDARY"||airdrop.rarity==="EPIC"){
+      setTimeout(()=>{burst(airdrop.color||"#f5cc70",60);setFlashOpacity(.4);setTimeout(()=>setFlashOpacity(0),120);},750);
+    }
+    // resize canvas
+    const el=overlayRef.current;
+    if(el){const c=canvasRef.current;if(c){c.width=el.offsetWidth;c.height=el.offsetHeight;}}
+  },[]);
+
+  const c=airdrop.color||"#f5cc70";
+  const rays=Array.from({length:14},(_,i)=>i);
+
   return(
-    <div className="overlay" style={{zIndex:2000}}>
-      <div className="air-in" style={{textAlign:"center",maxWidth:380,width:"100%"}}>
-        <div style={{position:"relative",display:"inline-block",marginBottom:16}}>
-          {Array.from({length:8},(_,i)=>(
-            <div key={i} style={{position:"absolute",top:"50%",left:"50%",width:2,height:80,
-              background:`linear-gradient(to top,${airdrop.color},transparent)`,
-              transform:`rotate(${i*45}deg) translateY(-100%)`,transformOrigin:"0 0",opacity:.5}}/>
+    <div className="overlay" style={{zIndex:2000}} ref={overlayRef}>
+      {/* canvas particles */}
+      <canvas ref={canvasRef} style={{position:"absolute",inset:0,pointerEvents:"none",zIndex:1,width:"100%",height:"100%"}}/>
+      {/* flash */}
+      <div style={{position:"absolute",inset:0,background:"#fff",opacity:flashOpacity,transition:"opacity .4s",pointerEvents:"none",zIndex:2}}/>
+      {/* card */}
+      <div style={{position:"relative",zIndex:3,textAlign:"center",maxWidth:380,width:"100%",
+        transform:show?"translateY(0) scale(1)":"translateY(-40px) scale(.6)",
+        opacity:show?1:0,transition:"transform .6s cubic-bezier(.34,1.56,.64,1),opacity .4s"}}>
+        {/* icon + rings + rays */}
+        <div style={{position:"relative",display:"inline-block",marginBottom:16,width:130,height:130}}>
+          {[0,1].map(i=>(
+            <div key={i} style={{position:"absolute",inset:0,borderRadius:"50%",
+              border:`2px solid ${c}`,opacity:0,
+              animation:`routr 1.2s ease-out ${i*.45}s infinite`}}/>
           ))}
-          <div style={{fontSize:84,position:"relative",zIndex:1,filter:`drop-shadow(0 0 30px ${airdrop.color})`}}>{airdrop.icon}</div>
+          <div style={{position:"absolute",inset:-28,zIndex:0}}>
+            {rays.map(i=>(
+              <div key={i} style={{position:"absolute",top:"50%",left:"50%",width:2,height:0,
+                background:`linear-gradient(to right,transparent,${c})`,
+                borderRadius:1,transformOrigin:"0 50%",
+                transform:`rotate(${i*25.7}deg) translateY(-50%)`,
+                animation:`rout .7s ease-out ${i*.035}s forwards`}}/>
+            ))}
+          </div>
+          <div style={{fontSize:86,lineHeight:"130px",position:"relative",zIndex:1,
+            animation:`iconGlow 2s ease-in-out infinite`,
+            filter:`drop-shadow(0 0 20px ${c})`}}>{airdrop.icon}</div>
         </div>
-        <div className="cond" style={{fontSize:13,color:"var(--muted2)",letterSpacing:4,marginBottom:4}}>📦 AIRDROP INCOMING!</div>
-        <div className="cond" style={{fontSize:38,fontWeight:900,color:airdrop.color,marginBottom:8,textShadow:`0 0 28px ${airdrop.color}`}}>{airdrop.name}</div>
-        <div className="badge" style={{background:`${airdrop.color}20`,border:`1px solid ${airdrop.color}60`,color:airdrop.color,fontSize:13,padding:"5px 14px",marginBottom:16}}>★ {airdrop.rarity}</div>
-        {airdrop.note&&<div style={{color:"var(--muted2)",fontSize:14,fontStyle:"italic",marginBottom:16}}>"{airdrop.note}"</div>}
-        <button className="btn btn-gold" onClick={onClaim} style={{fontSize:18,padding:"14px 48px",animation:"glow 2s ease-in-out infinite"}}>✅ รับรางวัล</button>
+        <div className="cond" style={{fontSize:12,color:"var(--muted2)",letterSpacing:4,marginBottom:6,
+          opacity:show?1:0,transform:show?"translateY(0)":"translateY(8px)",transition:"all .3s .3s"}}>
+          📦 AIRDROP INCOMING!
+        </div>
+        <div className="cond" style={{fontSize:36,fontWeight:900,color:c,marginBottom:8,
+          textShadow:`0 0 28px ${c}`,
+          opacity:show?1:0,transform:show?"translateY(0)":"translateY(10px)",transition:"all .3s .45s"}}>
+          {airdrop.name}
+        </div>
+        <div className="badge" style={{background:`${c}20`,border:`1px solid ${c}60`,color:c,
+          fontSize:13,padding:"5px 14px",marginBottom:10,display:"inline-block",
+          opacity:show?1:0,transform:show?"translateY(0)":"translateY(8px)",transition:"all .3s .55s"}}>
+          ★ {airdrop.rarity}
+        </div>
+        {airdrop.note&&<div style={{color:"var(--muted2)",fontSize:14,fontStyle:"italic",marginBottom:14,
+          opacity:show?1:0,transition:"opacity .3s .6s"}}>"{airdrop.note}"</div>}
+        <br/>
+        <button className="btn btn-gold" onClick={()=>{
+          burst(c,90);setFlashOpacity(.5);setTimeout(()=>setFlashOpacity(0),120);
+          setTimeout(onClaim,400);
+        }} style={{fontSize:18,padding:"14px 48px",animation:"glow 2s ease-in-out infinite",
+          opacity:show?1:0,transition:"opacity .3s .7s"}}>✅ รับรางวัล</button>
       </div>
+      <style>{`
+        @keyframes routr{0%{transform:scale(.4);opacity:.9}100%{transform:scale(2.2);opacity:0}}
+        @keyframes rout{0%{opacity:1;height:0;margin-top:0}70%{opacity:.7;height:55px;margin-top:-27px}100%{opacity:0;height:75px;margin-top:-37px}}
+        @keyframes iconGlow{0%,100%{filter:drop-shadow(0 0 12px ${c})}50%{filter:drop-shadow(0 0 32px ${c}) drop-shadow(0 0 64px ${c})}}
+        @keyframes shake{0%,100%{transform:rotate(-8deg)}50%{transform:rotate(8deg)}}
+      `}</style>
     </div>
   );
 }
 
+// ─────────────────────────────────────────────
+// LOGIN
 // ─────────────────────────────────────────────
 // LOGIN
 // ─────────────────────────────────────────────
@@ -676,97 +772,6 @@ function StudentDashboard({student,students,assignments,setPage,setStudents}){
 // ─────────────────────────────────────────────
 // STUDENT: ASSIGNMENTS
 // ─────────────────────────────────────────────
-function StudentAssignments({student,assignments,setStudents}){
-  const [uploadModal,setUploadModal]=useState(null);
-  const [driveLink,setDriveLink]=useState("");
-  function openUpload(a){setUploadModal(a);setDriveLink("");}
-  function submitWork(){
-    if(!uploadModal)return;
-    if(!driveLink.trim()){return;}
-    const today=new Date().toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"numeric"});
-    // XP = 0 ก่อน จนกว่าครูจะตรวจและให้คะแนน
-    setStudents(prev=>prev.map(s=>s.id===student.id?{...s,submissions:{...s.submissions,[uploadModal.id]:{file:driveLink,submittedAt:today,xpEarned:0,maxXp:uploadModal.xp,graded:false}}}:s));
-    setUploadModal(null);
-  }
-  function removeSubmission(id){
-    setStudents(prev=>prev.map(s=>{
-      if(s.id!==student.id)return s;
-      const sub=s.submissions[id];
-      const{[id]:_,...rest}=s.submissions;
-      // หักคะแนนเฉพาะที่ครูตรวจแล้วเท่านั้น
-      return{...s,xp:s.xp-(sub?.graded?sub.xpEarned||0:0),submissions:rest};
-    }));
-  }
-  function replaceFile(id){removeSubmission(id);const a=assignments.find(x=>x.id===id);if(a)setUploadModal(a);}
-  return(
-    <div className="fade-up" style={{padding:20,maxWidth:900,margin:"0 auto"}}>
-      {uploadModal&&(
-        <div className="overlay">
-          <div className="card card-cyan" style={{width:"100%",maxWidth:480}}>
-            <div className="cond" style={{fontSize:22,color:"var(--cyan)",letterSpacing:2,marginBottom:4}}>📎 ส่งงาน</div>
-            <div style={{color:"var(--muted2)",fontSize:13,marginBottom:4}}>{uploadModal.title}</div>
-            <div className="mono" style={{color:"var(--gold)",fontSize:13,marginBottom:20}}>+{uploadModal.xp} XP</div>
-            <div style={{marginBottom:14}}>
-              <label className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,display:"block",marginBottom:8}}>🔗 ลิงก์ Google Drive</label>
-              <input className="input" value={driveLink} onChange={e=>setDriveLink(e.target.value)}
-                placeholder="https://drive.google.com/..."/>
-              <div style={{fontSize:11,color:"var(--muted)",marginTop:6}}>
-                💡 เปิด Drive → อัปโหลดไฟล์ → คลิกขวา → "Get link" → Copy มาวางที่นี่
-              </div>
-            </div>
-            <div style={{display:"flex",gap:10}}>
-              <button className="btn btn-cyan" onClick={submitWork} disabled={!driveLink.trim()}
-                style={{flex:1,opacity:driveLink.trim()?1:.4}}>✅ ส่งงาน (+{uploadModal.xp} XP)</button>
-              <button className="btn-outline" onClick={()=>setUploadModal(null)} style={{flex:1}}>ยกเลิก</button>
-            </div>
-          </div>
-        </div>
-      )}
-      <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:3,marginBottom:20}}>MISSION BOARD — {assignments.length} OBJECTIVES</div>
-      {CHAPTERS.map(ch=>{
-        const chA=assignments.filter(a=>a.chapterId===ch.id);if(!chA.length)return null;
-        return(
-          <div key={ch.id} style={{marginBottom:28}}>
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:12,paddingBottom:10,borderBottom:`1px solid ${ch.color}35`}}>
-              <span style={{fontSize:24}}>{ch.icon}</span>
-              <div><div className="mono" style={{fontSize:9,color:"var(--muted)",letterSpacing:2}}>{ch.label}</div><div className="cond" style={{fontSize:22,fontWeight:700,color:ch.color}}>{ch.title}</div></div>
-            </div>
-            {chA.map(a=>{
-              const sub=student.submissions?.[a.id];const tm=TYPE_META[a.type]||{};
-              return(
-                <div key={a.id} className="card" style={{display:"flex",gap:16,alignItems:"center",marginBottom:8,borderColor:sub?`${ch.color}50`:"var(--border)",background:sub?`linear-gradient(135deg,var(--bg2),${ch.bg})`:"var(--bg2)"}}>
-                  <div style={{fontSize:28,flexShrink:0}}>{tm.icon||"📄"}</div>
-                  <div style={{flex:1,minWidth:0}}>
-                    <div style={{display:"flex",gap:8,marginBottom:6,flexWrap:"wrap"}}>
-                      <span className="badge" style={{background:`${tm.color}20`,border:`1px solid ${tm.color}50`,color:tm.color}}>{tm.label}</span>
-                      {sub?<span className="badge" style={{background:"rgba(94,200,126,.14)",border:"1px solid rgba(94,200,126,.4)",color:"var(--green)"}}>✓ ส่งแล้ว</span>
-                         :<span className="badge" style={{background:"rgba(232,96,96,.1)",border:"1px solid rgba(232,96,96,.3)",color:"var(--red)"}}>⏳ ยังไม่ส่ง</span>}
-                    </div>
-                    <div style={{fontSize:14,fontWeight:600,color:"#fff",marginBottom:4}}>{a.title}</div>
-                    <div style={{fontSize:12,color:"var(--muted)"}}>{a.desc} · ครบกำหนด {a.due}</div>
-                    {sub&&<div style={{fontSize:12,marginTop:4}}>
-                      <a href={sub.file} target="_blank" rel="noreferrer" style={{color:"var(--cyan)"}}>🔗 ดูไฟล์งาน</a>
-                      <span style={{color:"var(--muted)"}}> · {sub.submittedAt}</span>
-                      <span style={{marginLeft:8,color:sub.graded?"var(--gold)":"var(--muted)",fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
-                        {sub.graded?`⭐ ${sub.xpEarned} / ${sub.maxXp||a.xp} XP`:"⏳ รอครูตรวจ"}
-                      </span>
-                    </div>}
-                  </div>
-                  <div style={{textAlign:"center",flexShrink:0}}><div className="mono" style={{fontSize:14,color:"var(--gold)",fontWeight:700}}>+{a.xp}</div><div style={{fontSize:10,color:"var(--muted)"}}>XP</div></div>
-                  <div style={{display:"flex",flexDirection:"column",gap:6,flexShrink:0}}>
-                    {!sub&&<button className="btn btn-cyan" onClick={()=>openUpload(a)} style={{padding:"8px 14px",fontSize:12}}>📎 แนบลิงก์</button>}
-                    {sub&&<button className="btn-ghost" onClick={()=>replaceFile(a.id)} style={{fontSize:11}}>🔄 เปลี่ยน</button>}
-                    {sub&&<button className="btn btn-red" onClick={()=>removeSubmission(a.id)} style={{padding:"6px 12px",fontSize:11}}>🗑 ลบ</button>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        );
-      })}
-    </div>
-  );
-}
 
 // ─────────────────────────────────────────────
 // STUDENT: RESOURCES
@@ -1107,9 +1112,16 @@ function TeacherOverview({students,assignments,setPage}){
 // ─────────────────────────────────────────────
 // TEACHER: STUDENTS
 // ─────────────────────────────────────────────
-function TeacherStudents({students,assignments}){
+function TeacherStudents({students,assignments,setStudents}){
   const [sel,setSel]=useState(null);
   const s=sel?students.find(x=>x.id===sel):null;
+  function removeAirdrop(studentId,idx){
+    setStudents(prev=>{
+      const updated=prev.map(s=>s.id===studentId?{...s,inventory:s.inventory.filter((_,i)=>i!==idx)}:s);
+      gasSave("saveStudents",updated);
+      return updated;
+    });
+  }
   if(s)return(
     <div className="fade-up" style={{padding:20,maxWidth:900,margin:"0 auto"}}>
       <button className="btn-outline" onClick={()=>setSel(null)} style={{marginBottom:20}}>← กลับ</button>
@@ -1122,7 +1134,7 @@ function TeacherStudents({students,assignments}){
         <div style={{marginTop:16}}><XPBar xp={s.xp}/></div>
         <div style={{marginTop:10}}><ProgressFlag xp={s.xp}/></div>
       </div>
-      <div className="card">
+      <div className="card" style={{marginBottom:16}}>
         <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,marginBottom:14}}>SUBMISSION STATUS</div>
         {assignments.map(a=>{const sub=s.submissions?.[a.id];const tm=TYPE_META[a.type]||{};return(
           <div key={a.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid var(--border)"}}>
@@ -1133,8 +1145,23 @@ function TeacherStudents({students,assignments}){
               <span className="badge" style={{background:"rgba(94,200,126,.12)",border:"1px solid rgba(94,200,126,.35)",color:"var(--green)"}}>✓ ส่งแล้ว</span>
             </>:<span className="badge" style={{background:"rgba(232,96,96,.1)",border:"1px solid rgba(232,96,96,.25)",color:"var(--red)"}}>⏳ ยังไม่ส่ง</span>}
           </div>
-        );})}
-      </div>
+        );})}</div>
+      {s.inventory&&s.inventory.length>0&&(
+        <div className="card" style={{borderColor:"rgba(170,143,240,.35)"}}>
+          <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,marginBottom:14}}>📦 AIRDROP INVENTORY ({s.inventory.length} ชิ้น)</div>
+          {s.inventory.map((item:any,idx:number)=>(
+            <div key={idx} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid var(--border)"}}>
+              <span style={{fontSize:24}}>{item.icon}</span>
+              <div style={{flex:1}}>
+                <div style={{fontSize:13,fontWeight:600,color:item.color||"#fff"}}>{item.name}</div>
+                <div style={{fontSize:11,color:"var(--muted)"}}>{item.rarity} · {item.receivedAt}</div>
+                {item.note&&<div style={{fontSize:11,color:"var(--muted2)",fontStyle:"italic"}}>"{item.note}"</div>}
+              </div>
+              <button className="btn btn-red" onClick={()=>{if(window.confirm(`ลบ "${item.name}" ของ ${s.name}?`))removeAirdrop(s.id,idx);}} style={{padding:"6px 12px",fontSize:12}}>🗑 ลบ</button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
   return(
@@ -1153,6 +1180,8 @@ function TeacherStudents({students,assignments}){
   );
 }
 
+// ─────────────────────────────────────────────
+// TEACHER: ASSIGNMENTS
 // ─────────────────────────────────────────────
 // TEACHER: ASSIGNMENTS
 // ─────────────────────────────────────────────
@@ -1414,6 +1443,7 @@ function TeacherScores({students,setStudents}){
   const [selMulti,setSelMulti]=useState([]); // หลายคน
   const [xpAmt,setXpAmt]=useState("");
   const [activityName,setActivityName]=useState("");
+  const [selChapter,setSelChapter]=useState("CH1");
   const [msg,setMsg]=useState(null);
 
   function toast(t,isErr=false){setMsg({text:t,err:isErr});setTimeout(()=>setMsg(null),3500);}
@@ -1428,7 +1458,7 @@ function TeacherScores({students,setStudents}){
     if(targetMode==="single"&&!selStu){toast("กรุณาเลือกนักเรียน",true);return;}
     if(targetMode==="multi"&&selMulti.length===0){toast("กรุณาเลือกนักเรียนอย่างน้อย 1 คน",true);return;}
     const today=new Date().toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"numeric"});
-    const logEntry={activity:activityName.trim(),xp:Number(xpAmt),date:today};
+    const logEntry={activity:activityName.trim(),xp:Number(xpAmt),date:today,chapterId:selChapter};
     if(targetMode==="all"){
       setStudents(prev=>prev.map(s=>({...s,xp:s.xp+Number(xpAmt),xpLog:[...(s.xpLog||[]),logEntry]})));
       toast(`✅ เพิ่ม ${xpAmt} XP จาก "${activityName}" ให้ทุกคน ${students.length} คน!`);
@@ -1441,7 +1471,7 @@ function TeacherScores({students,setStudents}){
       setStudents(prev=>prev.map(s=>s.id===selStu?{...s,xp:s.xp+Number(xpAmt),xpLog:[...(s.xpLog||[]),logEntry]}:s));
       toast(`✅ เพิ่ม ${xpAmt} XP จาก "${activityName}" ให้ ${name}!`);
     }
-    setXpAmt("");setActivityName("");setSelStu("");
+    setXpAmt("");setActivityName("");setSelStu("");setSelChapter("CH1");
   }
 
   const allActivities=useMemo(()=>{
@@ -1480,10 +1510,18 @@ function TeacherScores({students,setStudents}){
         <>
           <div className="card card-gold" style={{marginBottom:20}}>
             <div className="cond" style={{fontSize:22,color:"var(--gold)",letterSpacing:2,marginBottom:18}}>⭐ เพิ่ม XP จากกิจกรรม</div>
-            <div style={{marginBottom:14}}>
-              <label className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,display:"block",marginBottom:8}}>ชื่องาน / กิจกรรม</label>
-              <input className="input" value={activityName} onChange={e=>setActivityName(e.target.value)}
-                placeholder="เช่น แบบทดสอบบทที่ 1, ใบงาน 2.3, ตอบคำถามในชั้นเรียน"/>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
+              <div>
+                <label className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,display:"block",marginBottom:8}}>บทเรียน</label>
+                <select className="input" value={selChapter} onChange={e=>setSelChapter(e.target.value)}>
+                  {CHAPTERS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label} {c.title}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,display:"block",marginBottom:8}}>ชื่อกิจกรรม</label>
+                <input className="input" value={activityName} onChange={e=>setActivityName(e.target.value)}
+                  placeholder="เช่น ตอบคำถาม, แบบทดสอบ"/>
+              </div>
             </div>
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
               <div>
@@ -1642,7 +1680,7 @@ function TeacherScores({students,setStudents}){
 // ─────────────────────────────────────────────
 // TEACHER: AIRDROP
 // ─────────────────────────────────────────────
-function TeacherAirdrop({students,setPendingAirdrop}){
+function TeacherAirdrop({students,setPendingAirdrop,setStudents}){
   const DEFAULT_POOL=[
     {id:"r1",name:"AWM Sniper Rifle",icon:"🔫",rarity:"LEGENDARY",color:"#f5cc70"},
     {id:"r2",name:"Level 3 Helmet",icon:"⛑️",rarity:"EPIC",color:"#a569bd"},
@@ -1654,6 +1692,7 @@ function TeacherAirdrop({students,setPendingAirdrop}){
     {id:"r8",name:"Bandage Pack",icon:"🩹",rarity:"COMMON",color:"#7b8fe0"},
   ];
   const RARITY_COLORS={LEGENDARY:"#f5cc70",EPIC:"#a569bd",RARE:"#4ecaae",UNCOMMON:"#7de8a0",CUSTOM:"#e88c4a",COMMON:"#7b8fe0"};
+  const [tabAir,setTabAir]=useState("roll"); // "roll" | "history"
   const [pool,setPool]=useState(DEFAULT_POOL);
   const [showPoolEditor,setShowPoolEditor]=useState(false);
   const [addForm,setAddForm]=useState({name:"",icon:"🎁",rarity:"CUSTOM"});
@@ -1709,9 +1748,65 @@ function TeacherAirdrop({students,setPendingAirdrop}){
     setTimeout(()=>setSent(null),4000);setResult(null);setSelStu("");setNote("");
   }
 
+  // รวม inventory ทุกคนเป็นประวัติ
+  const allHistory=students.flatMap(s=>(s.inventory||[]).map((it:any,idx:number)=>({...it,studentId:s.id,studentName:s.name,studentAvatar:s.avatar,idx})))
+    .sort((a:any,b:any)=>a.receivedAt>b.receivedAt?-1:1);
+
+  function removeAirdropHistory(studentId:string,idx:number){
+    if(!window.confirm("ลบ Airdrop นี้ออกจาก inventory ของนักเรียน?"))return;
+    setStudents(prev=>{
+      const updated=prev.map(s=>s.id===studentId?{...s,inventory:s.inventory.filter((_:any,i:number)=>i!==idx)}:s);
+      gasSave("saveStudents",updated);
+      return updated;
+    });
+  }
+
+  const tabStyle2=(t:string)=>({
+    background:tabAir===t?"rgba(232,188,85,.12)":"transparent",
+    border:"none",borderBottom:tabAir===t?"2px solid var(--gold)":"2px solid transparent",
+    color:tabAir===t?"var(--gold2)":"var(--muted2)",
+    padding:"10px 22px",cursor:"pointer",
+    fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,fontSize:14,letterSpacing:1,
+    transition:"all .2s"
+  });
+
   return(
     <div className="fade-up" style={{padding:20,maxWidth:900,margin:"0 auto"}}>
-      <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:3,marginBottom:16}}>📦 AIRDROP LAUNCHER</div>
+      <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:3,marginBottom:12}}>📦 AIRDROP LAUNCHER</div>
+      <div style={{display:"flex",borderBottom:"1px solid var(--border)",marginBottom:20}}>
+        <button style={tabStyle2("roll")} onClick={()=>setTabAir("roll")}>🎲 ส่ง Airdrop</button>
+        <button style={tabStyle2("history")} onClick={()=>setTabAir("history")}>📋 ประวัติการรับ ({allHistory.length})</button>
+      </div>
+      {tabAir==="history"&&(
+        <div>
+          {allHistory.length===0?(
+            <div className="card" style={{textAlign:"center",padding:48}}>
+              <div style={{fontSize:40,marginBottom:12}}>📦</div>
+              <div className="cond" style={{fontSize:20,color:"var(--muted)"}}>ยังไม่มีประวัติการส่ง Airdrop</div>
+            </div>
+          ):(
+            allHistory.map((it:any,i:number)=>(
+              <div key={i} className="card" style={{display:"flex",alignItems:"center",gap:14,marginBottom:8,borderColor:`${it.color||"var(--border)"}40`}}>
+                <div style={{fontSize:32}}>{it.icon}</div>
+                <div style={{flex:1}}>
+                  <div style={{fontSize:14,fontWeight:600,color:it.color||"#fff"}}>{it.name}</div>
+                  <div style={{display:"flex",gap:8,marginTop:4,flexWrap:"wrap"}}>
+                    <span className="badge" style={{background:`${it.color||"#fff"}22`,border:`1px solid ${it.color||"#fff"}50`,color:it.color||"#fff",fontSize:9}}>★ {it.rarity}</span>
+                    <span style={{fontSize:12,color:"var(--muted)"}}>{it.receivedAt}</span>
+                  </div>
+                  {it.note&&<div style={{fontSize:12,color:"var(--muted2)",fontStyle:"italic",marginTop:3}}>"{it.note}"</div>}
+                </div>
+                <div style={{textAlign:"center",minWidth:120}}>
+                  <div style={{fontSize:24}}>{it.studentAvatar}</div>
+                  <div style={{fontSize:12,color:"#fff",marginTop:2}}>{it.studentName}</div>
+                </div>
+                <button className="btn btn-red" onClick={()=>removeAirdropHistory(it.studentId,it.idx)} style={{padding:"7px 12px",fontSize:12,flexShrink:0}}>🗑 ลบ</button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+      {tabAir==="roll" && (<div>
       {sent&&<div className="air-in" style={{background:"rgba(232,188,85,.12)",border:"1px solid rgba(232,188,85,.5)",borderRadius:8,padding:"13px 20px",marginBottom:14,color:"var(--gold2)",fontSize:14,textAlign:"center"}}>{sent}</div>}
       <div className="card card-gold" style={{marginBottom:14}}>
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:showPoolEditor?16:0}}>
@@ -1795,9 +1890,13 @@ function TeacherAirdrop({students,setPendingAirdrop}){
         </div>
       </div>
     </div>
+    )}
+  </div>
   );
 }
 
+// ─────────────────────────────────────────────
+// GOOGLE APPS SCRIPT
 // ─────────────────────────────────────────────
 // GOOGLE APPS SCRIPT API — แก้ไขแล้ว
 // ─────────────────────────────────────────────
@@ -1913,14 +2012,25 @@ export default function App(){
   const [page,setPage]=useState("dashboard");
   const [pendingAirdrop,setPendingAirdrop]=useState(null);
   const [activePopup,setActivePopup]=useState(null);
+  const [loginPending,setLoginPending]=useState<any>(null);
 
-  function handleLogin(role,userId){setAuth({role,userId});setPage(role==="teacher"?"overview":"dashboard");}
-  function handleLogout(){setAuth(null);}
+  function handleLogin(role,userId){
+    setAuth({role,userId});
+    setPage(role==="teacher"?"overview":"dashboard");
+    if(role==="student"){
+      const s=students.find((x:any)=>x.id===userId);
+      if(s&&s.inventory&&s.inventory.length>0){
+        const unseen=(s.inventory as any[]).filter((it:any)=>!it.seen);
+        if(unseen.length>0)setLoginPending(unseen[unseen.length-1]);
+      }
+    }
+  }
+  function handleLogout(){setAuth(null);setLoginPending(null);}
 
   useEffect(()=>{
     if(!pendingAirdrop)return;
-    const{targetStudentId,...item}=pendingAirdrop;
-    setStudents(prev=>prev.map(s=>s.id===targetStudentId?{...s,inventory:[...s.inventory,item]}:s));
+    const{targetStudentId,...item}=pendingAirdrop as any;
+    setStudents(prev=>prev.map(s=>s.id===targetStudentId?{...s,inventory:[...s.inventory,{...item,seen:false}]}:s));
     if(auth?.role==="student"&&auth?.userId===targetStudentId)setActivePopup({...item});
     setPendingAirdrop(null);
   },[pendingAirdrop]);
@@ -1935,7 +2045,27 @@ export default function App(){
     <>
       <style>{G}</style>
       <VeniceBackground/>
-      {activePopup&&role==="student"&&<AirdropPopup airdrop={activePopup} onClaim={()=>setActivePopup(null)}/>}
+      {activePopup&&role==="student"&&<AirdropPopup airdrop={activePopup} onClaim={()=>{
+        setStudents(prev=>prev.map(s=>s.id===userId?{...s,inventory:s.inventory.map((it:any)=>it.name===activePopup.name?{...it,seen:true}:it)}:s));
+        setActivePopup(null);
+      }}/>}
+      {loginPending&&role==="student"&&!activePopup&&(
+        <div style={{position:"fixed",top:60,left:0,right:0,zIndex:500,padding:"0 16px"}}>
+          <div style={{maxWidth:700,margin:"0 auto",background:"linear-gradient(90deg,rgba(232,188,85,.12),rgba(232,188,85,.22),rgba(232,188,85,.12))",
+            border:"1px solid rgba(232,188,85,.45)",borderRadius:10,padding:"12px 18px",
+            display:"flex",alignItems:"center",gap:14,backdropFilter:"blur(8px)"}}>
+            <div style={{fontSize:28,animation:"shake 1s ease-in-out infinite"}}>📦</div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:14,fontWeight:600,color:"var(--gold)"}}>มี Airdrop รอคุณอยู่!</div>
+              <div style={{fontSize:12,color:"var(--muted2)",marginTop:2}}>ครูส่งรางวัลให้คุณ กดเปิดได้เลย</div>
+            </div>
+            <button className="btn btn-gold" onClick={()=>{setActivePopup(loginPending);setLoginPending(null);}}
+              style={{fontSize:13,padding:"8px 20px"}}>📦 เปิด!</button>
+            <button className="btn-ghost" onClick={()=>setLoginPending(null)}
+              style={{fontSize:11,padding:"6px 10px"}}>✕</button>
+          </div>
+        </div>
+      )}
       <div style={{position:"relative",zIndex:1,minHeight:"100vh"}}>
         <TopNav user={navUser} role={role} page={page} setPage={setPage} onLogout={handleLogout}/>
         <main>
@@ -1947,12 +2077,12 @@ export default function App(){
           {role==="student"&&page==="inventory"    &&currentStudent&&<StudentInventory student={currentStudent}/>}
           {role==="student"&&page==="settings"     &&currentStudent&&<StudentSettings student={currentStudent} setStudents={setStudents}/>}
           {role==="teacher"&&page==="overview"     &&<TeacherOverview students={students} assignments={assignments} setPage={setPage}/>}
-          {role==="teacher"&&page==="students"     &&<TeacherStudents students={students} assignments={assignments}/>}
+          {role==="teacher"&&page==="students"     &&<TeacherStudents students={students} assignments={assignments} setStudents={setStudents}/>}
           {role==="teacher"&&page==="t-assignments"&&<TeacherAssignments assignments={assignments} setAssignments={setAssignments} students={students} setStudents={setStudents}/>}
           {role==="teacher"&&page==="t-resources"  &&<TeacherResources resources={resources} setResources={setResources}/>}
           {role==="teacher"&&page==="t-scores"     &&<TeacherScores students={students} setStudents={setStudents}/>}
           {role==="teacher"&&page==="t-exam"       &&<TeacherExamScores students={students} setStudents={setStudents}/>}
-          {role==="teacher"&&page==="t-airdrop"    &&<TeacherAirdrop students={students} setPendingAirdrop={setPendingAirdrop}/>}
+          {role==="teacher"&&page==="t-airdrop"    &&<TeacherAirdrop students={students} setPendingAirdrop={setPendingAirdrop} setStudents={setStudents}/>}
           {role==="teacher"&&page==="ranking"      &&<RankingPage students={students} myId={undefined} isTeacher={true}/>}
         </main>
       </div>
