@@ -22,6 +22,7 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans Thai',sans-se
 @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
 @keyframes pulse{0%,100%{opacity:1}50%{opacity:.45}}
 @keyframes glow{0%,100%{box-shadow:0 0 8px var(--gold)}50%{box-shadow:0 0 24px var(--gold)}}
+@keyframes glowPulse{0%,100%{opacity:1;transform:translateY(-50%) scale(1)}50%{opacity:.75;transform:translateY(-50%) scale(1.2)}}
 @keyframes airIn{0%{transform:translateY(-50px) scale(.6);opacity:0}65%{transform:translateY(6px) scale(1.06)}100%{transform:translateY(0) scale(1);opacity:1}}
 @keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
 @keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
@@ -367,6 +368,87 @@ function GradeTable(){
 // ─────────────────────────────────────────────
 // AIRDROP POPUP
 // ─────────────────────────────────────────────
+function useAirdropParticles(){
+  const canvasRef=useRef<HTMLCanvasElement>(null);
+  const ptsRef=useRef<any[]>([]);
+  const rafRef=useRef<any>(null);
+  function burst(color:string,n=70){
+    const c=canvasRef.current;if(!c)return;
+    const cx=c.width/2,cy=c.height/2;
+    for(let i=0;i<n;i++){
+      const p:any={x:cx,y:cy,c:i%4===0?"#ffffff":i%7===0?"#ffe89a":color,
+        vx:(Math.random()-.5)*16,vy:(Math.random()-.5)*16-8,
+        life:1,r:Math.random()*7+3,g:.38,rot:Math.random()*6.28,
+        rs:(Math.random()-.5)*.28,star:Math.random()<.45};
+      ptsRef.current.push(p);
+    }
+    cancelAnimationFrame(rafRef.current);
+    function anim(){
+      const cv=canvasRef.current;if(!cv)return;
+      const ctx=cv.getContext("2d")!;
+      ctx.clearRect(0,0,cv.width,cv.height);
+      ptsRef.current=ptsRef.current.filter(p=>p.life>0);
+      ptsRef.current.forEach(p=>{
+        p.x+=p.vx;p.y+=p.vy;p.vy+=p.g;p.vx*=.97;p.life-=.019;p.rot+=p.rs;
+        if(p.life<=0)return;
+        ctx.save();ctx.globalAlpha=Math.max(0,p.life);
+        ctx.shadowBlur=12;ctx.shadowColor=p.c;ctx.fillStyle=p.c;
+        ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+        if(p.star){
+          ctx.beginPath();
+          for(let i=0;i<10;i++){const r2=i%2?p.r*.4:p.r,a=i*Math.PI/5-Math.PI/2;i?ctx.lineTo(r2*Math.cos(a),r2*Math.sin(a)):ctx.moveTo(r2*Math.cos(a),r2*Math.sin(a));}
+          ctx.closePath();ctx.fill();
+        }else{ctx.beginPath();ctx.arc(0,0,p.r/2,0,6.28);ctx.fill();}
+        ctx.restore();
+      });
+      if(ptsRef.current.length>0)rafRef.current=requestAnimationFrame(anim);
+    }
+    anim();
+  }
+  return{canvasRef,burst};
+}
+
+function playAirdropFX(rarity:string){
+  try{
+    const AC=(window as any).AudioContext||(window as any).webkitAudioContext;
+    const ac=new AC();
+    const freqs=rarity==="LEGENDARY"?[523,659,784,988,1047,1319]:
+                rarity==="EPIC"?[440,554,659,880,1047]:
+                rarity==="RARE"?[392,494,587,784]:[330,415,494];
+    freqs.forEach((f:number,i:number)=>{
+      const o=ac.createOscillator(),g=ac.createGain();
+      o.connect(g);g.connect(ac.destination);
+      o.frequency.value=f;
+      o.type=rarity==="LEGENDARY"?"sawtooth":rarity==="EPIC"?"square":"sine";
+      const t=ac.currentTime+i*.1;
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(.3,t+.06);g.gain.exponentialRampToValueAtTime(.001,t+.55);
+      o.start(t);o.stop(t+.55);
+    });
+    if(rarity==="LEGENDARY"){
+      const n=ac.createOscillator(),ng=ac.createGain();
+      n.type="sawtooth";n.frequency.value=55;n.connect(ng);ng.connect(ac.destination);
+      ng.gain.setValueAtTime(.15,ac.currentTime);ng.gain.exponentialRampToValueAtTime(.001,ac.currentTime+.5);
+      n.start(ac.currentTime);n.stop(ac.currentTime+.5);
+    }
+  }catch(e){}
+}
+
+function AirdropPendingBanner({airdrop,onOpen}:{airdrop:any,onOpen:()=>void}){
+  return(
+    <div style={{position:"fixed",top:54,left:0,right:0,zIndex:500,
+      background:"linear-gradient(90deg,rgba(232,188,85,.12),rgba(232,188,85,.25),rgba(232,188,85,.12))",
+      borderBottom:"1px solid rgba(232,188,85,.45)",
+      padding:"10px 20px",display:"flex",alignItems:"center",gap:14}}>
+      <div style={{fontSize:28,animation:"shake 1s ease-in-out infinite"}}>📦</div>
+      <div style={{flex:1}}>
+        <div style={{fontSize:14,fontWeight:600,color:"var(--gold2)"}}>มี Airdrop รอคุณอยู่!</div>
+        <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>ครูส่งรางวัลให้คุณ กดเปิดเพื่อรับ</div>
+      </div>
+      <button className="btn btn-gold" onClick={onOpen} style={{padding:"8px 20px",fontSize:14,animation:"glow 2s ease-in-out infinite"}}>📦 เปิด!</button>
+    </div>
+  );
+}
+
 function AirdropPopup({airdrop,onClaim}:{airdrop:any,onClaim:()=>void}){
   const {canvasRef,burst}=useAirdropParticles();
   const [show,setShow]=useState(false);
@@ -455,8 +537,6 @@ function AirdropPopup({airdrop,onClaim}:{airdrop:any,onClaim:()=>void}){
   );
 }
 
-// ─────────────────────────────────────────────
-// LOGIN
 // ─────────────────────────────────────────────
 // LOGIN
 // ─────────────────────────────────────────────
@@ -772,9 +852,174 @@ function StudentDashboard({student,students,assignments,setPage,setStudents}){
 // ─────────────────────────────────────────────
 // STUDENT: ASSIGNMENTS
 // ─────────────────────────────────────────────
+function StudentAssignments({student,assignments,setStudents}){
+  const [uploadModal,setUploadModal]=useState(null);
+  const [driveLink,setDriveLink]=useState("");
+  function openUpload(a){setUploadModal(a);setDriveLink("");}
+  function submitWork(){
+    if(!uploadModal)return;
+    if(!driveLink.trim()){return;}
+    const today=new Date().toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"numeric"});
+    // XP = 0 ก่อน จนกว่าครูจะตรวจและให้คะแนน
+    setStudents(prev=>prev.map(s=>s.id===student.id?{...s,submissions:{...s.submissions,[uploadModal.id]:{file:driveLink,submittedAt:today,xpEarned:0,maxXp:uploadModal.xp,graded:false}}}:s));
+    setUploadModal(null);
+  }
+  function removeSubmission(id){
+    setStudents(prev=>prev.map(s=>{
+      if(s.id!==student.id)return s;
+      const sub=s.submissions[id];
+      const{[id]:_,...rest}=s.submissions;
+      // หักคะแนนเฉพาะที่ครูตรวจแล้วเท่านั้น
+      return{...s,xp:s.xp-(sub?.graded?sub.xpEarned||0:0),submissions:rest};
+    }));
+  }
+  function replaceFile(id){removeSubmission(id);const a=assignments.find(x=>x.id===id);if(a)setUploadModal(a);}
+  return(
+    <div className="fade-up" style={{padding:20,maxWidth:900,margin:"0 auto"}}>
+      {uploadModal&&(
+        <div className="overlay">
+          <div className="card card-cyan" style={{width:"100%",maxWidth:480}}>
+            <div className="cond" style={{fontSize:22,color:"var(--cyan)",letterSpacing:2,marginBottom:4}}>📎 ส่งงาน</div>
+            <div style={{color:"var(--muted2)",fontSize:13,marginBottom:4}}>{uploadModal.title}</div>
+            <div className="mono" style={{color:"var(--gold)",fontSize:13,marginBottom:20}}>+{uploadModal.xp} XP</div>
+            <div style={{marginBottom:14}}>
+              <label className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,display:"block",marginBottom:8}}>🔗 ลิงก์ Google Drive</label>
+              <input className="input" value={driveLink} onChange={e=>setDriveLink(e.target.value)}
+                placeholder="https://drive.google.com/..."/>
+              <div style={{fontSize:11,color:"var(--muted)",marginTop:6}}>
+                💡 เปิด Drive → อัปโหลดไฟล์ → คลิกขวา → "Get link" → Copy มาวางที่นี่
+              </div>
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button className="btn btn-cyan" onClick={submitWork} disabled={!driveLink.trim()}
+                style={{flex:1,opacity:driveLink.trim()?1:.4}}>✅ ส่งงาน (+{uploadModal.xp} XP)</button>
+              <button className="btn-outline" onClick={()=>setUploadModal(null)} style={{flex:1}}>ยกเลิก</button>
+            </div>
+          </div>
+        </div>
+      )}
+      <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:3,marginBottom:20}}>MISSION BOARD — {assignments.length} OBJECTIVES</div>
+      {CHAPTERS.map(ch=>{
+        const chA=assignments.filter(a=>a.chapterId===ch.id);
+        const chLogs=(student.xpLog||[]).filter((l:any)=>l.chapterId===ch.id);
+        if(!chA.length&&!chLogs.length)return null;
+        return(
+          <div key={ch.id} style={{marginBottom:32}}>
+            {/* ── Chapter Header ── */}
+            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,paddingBottom:10,borderBottom:`2px solid ${ch.color}50`}}>
+              <span style={{fontSize:28}}>{ch.icon}</span>
+              <div>
+                <div className="mono" style={{fontSize:9,color:"var(--muted)",letterSpacing:2}}>{ch.label}</div>
+                <div className="cond" style={{fontSize:24,fontWeight:700,color:ch.color}}>{ch.title}</div>
+              </div>
+            </div>
 
-// ─────────────────────────────────────────────
-// STUDENT: RESOURCES
+            {/* ── ภาระงาน ── */}
+            {chA.length>0&&(
+              <div style={{marginBottom:16}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,paddingLeft:4}}>
+                  <span style={{fontSize:16}}>📝</span>
+                  <div className="mono" style={{fontSize:10,color:"var(--muted2)",letterSpacing:2,fontWeight:700}}>ภาระงาน</div>
+                  <span className="badge" style={{background:`${ch.color}15`,border:`1px solid ${ch.color}40`,color:ch.color,fontSize:9}}>{chA.length} งาน</span>
+                </div>
+                {chA.map(a=>{
+                  const sub=student.submissions?.[a.id];const tm=TYPE_META[a.type]||{};
+                  return(
+                    <div key={a.id} className="card" style={{display:"flex",gap:16,alignItems:"center",marginBottom:8,marginLeft:16,
+                      borderColor:sub?`${ch.color}50`:"var(--border)",background:sub?`linear-gradient(135deg,var(--bg2),${ch.bg})`:"var(--bg2)"}}>
+                      <div style={{fontSize:28,flexShrink:0}}>{tm.icon||"📄"}</div>
+                      <div style={{flex:1,minWidth:0}}>
+                        <div style={{display:"flex",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+                          <span className="badge" style={{background:`${tm.color}20`,border:`1px solid ${tm.color}50`,color:tm.color}}>{tm.label}</span>
+                          {sub?<span className="badge" style={{background:"rgba(94,200,126,.14)",border:"1px solid rgba(94,200,126,.4)",color:"var(--green)"}}>✓ ส่งแล้ว</span>
+                             :<span className="badge" style={{background:"rgba(232,96,96,.1)",border:"1px solid rgba(232,96,96,.3)",color:"var(--red)"}}>⏳ ยังไม่ส่ง</span>}
+                        </div>
+                        <div style={{fontSize:14,fontWeight:600,color:"#fff",marginBottom:4}}>{a.title}</div>
+                        <div style={{fontSize:12,color:"var(--muted)"}}>{a.desc} · ครบกำหนด {a.due}</div>
+                        {sub&&<div style={{fontSize:12,marginTop:4}}>
+                          <a href={sub.file} target="_blank" rel="noreferrer" style={{color:"var(--cyan)"}}>🔗 ดูไฟล์งาน</a>
+                          <span style={{color:"var(--muted)"}}> · {sub.submittedAt}</span>
+                          <span style={{marginLeft:8,color:sub.graded?"var(--gold)":"var(--muted)",fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
+                            {sub.graded?`⭐ ${sub.xpEarned} / ${sub.maxXp||a.xp} XP`:"⏳ รอครูตรวจ"}
+                          </span>
+                        </div>}
+                      </div>
+                      <div style={{textAlign:"center",flexShrink:0}}><div className="mono" style={{fontSize:14,color:"var(--gold)",fontWeight:700}}>+{a.xp}</div><div style={{fontSize:10,color:"var(--muted)"}}>XP</div></div>
+                      <div style={{display:"flex",flexDirection:"column",gap:6,flexShrink:0}}>
+                        {!sub&&<button className="btn btn-cyan" onClick={()=>openUpload(a)} style={{padding:"8px 14px",fontSize:12}}>📎 แนบลิงก์</button>}
+                        {sub&&<button className="btn-ghost" onClick={()=>replaceFile(a.id)} style={{fontSize:11}}>🔄 เปลี่ยน</button>}
+                        {sub&&<button className="btn btn-red" onClick={()=>removeSubmission(a.id)} style={{padding:"6px 12px",fontSize:11}}>🗑 ลบ</button>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* ── กิจกรรมในห้องเรียน ── */}
+            {chLogs.length>0&&(
+              <div style={{marginBottom:8}}>
+                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,paddingLeft:4}}>
+                  <span style={{fontSize:16}}>🏫</span>
+                  <div className="mono" style={{fontSize:10,color:"#aa8ff0",letterSpacing:2,fontWeight:700}}>กิจกรรมในห้องเรียน</div>
+                  <span className="badge" style={{background:"rgba(170,143,240,.2)",border:"1px solid rgba(170,143,240,.4)",color:"#aa8ff0",fontSize:9}}>{chLogs.length} กิจกรรม</span>
+                </div>
+                {[...chLogs].reverse().map((log:any,i:number)=>(
+                  <div key={i} className="card" style={{display:"flex",alignItems:"center",gap:14,marginBottom:8,marginLeft:16,borderColor:"rgba(170,143,240,.3)"}}>
+                    <div style={{fontSize:22}}>⭐</div>
+                    <div style={{flex:1}}>
+                      <span className="badge" style={{background:"rgba(94,200,126,.14)",border:"1px solid rgba(94,200,126,.4)",color:"var(--green)",marginBottom:4,display:"inline-block"}}>✓ ได้รับแล้ว</span>
+                      <div style={{fontSize:13,fontWeight:600,color:"#fff",marginTop:4}}>{log.activity}</div>
+                      <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{log.date}</div>
+                    </div>
+                    <div className="mono" style={{fontSize:16,fontWeight:700,color:"var(--gold)"}}>+{log.xp} XP</div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+      {/* กิจกรรมที่ไม่ได้ระบุบท (legacy) */}
+      {(student.xpLog||[]).filter((l:any)=>!l.chapterId).length>0&&(
+        <div style={{marginBottom:28}}>
+          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
+            <span style={{fontSize:16}}>🏫</span>
+            <div className="mono" style={{fontSize:10,color:"#aa8ff0",letterSpacing:2,fontWeight:700}}>กิจกรรมอื่นๆ</div>
+          </div>
+          {[...(student.xpLog||[])].filter((l:any)=>!l.chapterId).reverse().map((log:any,i:number)=>(
+            <div key={i} className="card" style={{display:"flex",alignItems:"center",gap:14,marginBottom:8,borderColor:"rgba(170,143,240,.3)"}}>
+              <div style={{fontSize:22}}>⭐</div>
+              <div style={{flex:1}}>
+                <span className="badge" style={{background:"rgba(94,200,126,.14)",border:"1px solid rgba(94,200,126,.4)",color:"var(--green)",marginBottom:4,display:"inline-block"}}>✓ ได้รับแล้ว</span>
+                <div style={{fontSize:13,fontWeight:600,color:"#fff",marginTop:4}}>{log.activity}</div>
+                <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{log.date}</div>
+              </div>
+              <div className="mono" style={{fontSize:16,fontWeight:700,color:"var(--gold)"}}>+{log.xp} XP</div>
+            </div>
+          ))}
+        </div>
+      )}
+      {/* ── XP รวมทั้งหมด ── */}
+      {(()=>{
+        const xpFromSubs=Object.values(student.submissions||{}).reduce((s:number,sub:any)=>s+(sub?.graded?sub.xpEarned||0:0),0);
+        const xpFromLog=(student.xpLog||[]).reduce((s:number,l:any)=>s+l.xp,0);
+        const total=xpFromSubs+xpFromLog;
+        if(total===0)return null;
+        return(
+          <div style={{padding:"14px 18px",background:"rgba(232,188,85,.08)",border:"1px solid rgba(232,188,85,.3)",
+            borderRadius:10,display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8,marginBottom:20}}>
+            <div>
+              <div style={{fontSize:13,color:"var(--muted2)"}}>XP รวมทั้งหมด</div>
+              <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>งานส่ง {xpFromSubs.toLocaleString()} + กิจกรรม {xpFromLog.toLocaleString()} XP</div>
+            </div>
+            <div className="mono" style={{fontSize:24,fontWeight:700,color:"var(--gold2)"}}>{total.toLocaleString()} XP</div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
 // ─────────────────────────────────────────────
 function StudentResources({resources}){
   const ti={pdf:"📄",ppt:"📊",doc:"📝",img:"🖼️",zip:"📦",link:"🔗"};
@@ -1180,8 +1425,6 @@ function TeacherStudents({students,assignments,setStudents}){
   );
 }
 
-// ─────────────────────────────────────────────
-// TEACHER: ASSIGNMENTS
 // ─────────────────────────────────────────────
 // TEACHER: ASSIGNMENTS
 // ─────────────────────────────────────────────
@@ -1896,8 +2139,6 @@ function TeacherAirdrop({students,setPendingAirdrop,setStudents}){
 }
 
 // ─────────────────────────────────────────────
-// GOOGLE APPS SCRIPT
-// ─────────────────────────────────────────────
 // GOOGLE APPS SCRIPT API — แก้ไขแล้ว
 // ─────────────────────────────────────────────
 const GAS_URL = "https://script.google.com/macros/s/AKfycbzRbyKEQZMpFVVokRgmhAxe2IUxAL4cFmD-40OUWGlIjrb39PedymrwYh6UNMBZNgua/exec";
@@ -2030,8 +2271,17 @@ export default function App(){
   useEffect(()=>{
     if(!pendingAirdrop)return;
     const{targetStudentId,...item}=pendingAirdrop as any;
-    setStudents(prev=>prev.map(s=>s.id===targetStudentId?{...s,inventory:[...s.inventory,{...item,seen:false}]}:s));
-    if(auth?.role==="student"&&auth?.userId===targetStudentId)setActivePopup({...item});
+    // เพิ่ม inventory พร้อม seen:false เสมอ
+    setStudents(prev=>{
+      const updated=prev.map(s=>s.id===targetStudentId?{...s,inventory:[...s.inventory,{...item,seen:false}]}:s);
+      // บันทึกลง Sheet ทันทีโดยไม่รอ debounce
+      gasSave("saveStudents",updated);
+      return updated;
+    });
+    // ถ้านักเรียน login อยู่ตอนนี้ → แสดง popup ทันที
+    if(auth?.role==="student"&&auth?.userId===targetStudentId){
+      setTimeout(()=>setActivePopup({...item}),300);
+    }
     setPendingAirdrop(null);
   },[pendingAirdrop]);
 
