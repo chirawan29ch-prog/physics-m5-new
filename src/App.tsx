@@ -902,7 +902,8 @@ function StudentAssignments({student,assignments,setStudents}){
       {CHAPTERS.map(ch=>{
         const chA=assignments.filter(a=>a.chapterId===ch.id);
         const chLogs=(student.xpLog||[]).filter((l:any)=>(l.chapterId||'CH1')===ch.id);
-        if(!chA.length&&!chLogs.length)return null;
+        const allChActNames=[...new Set((students||[]).flatMap((st:any)=>(st.xpLog||[]).filter((l:any)=>(l.chapterId||"CH1")===ch.id).map((l:any)=>l.activity)))];
+        if(!chA.length&&!chLogs.length&&allChActNames.length===0)return null;
         return(
           <div key={ch.id} style={{marginBottom:32}}>
             {/* ── Chapter Header ── */}
@@ -957,26 +958,50 @@ function StudentAssignments({student,assignments,setStudents}){
             )}
 
             {/* ── กิจกรรมในห้องเรียน ── */}
-            {chLogs.length>0&&(
-              <div style={{marginBottom:8}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,paddingLeft:4}}>
-                  <span style={{fontSize:16}}>🏫</span>
-                  <div className="mono" style={{fontSize:10,color:"#aa8ff0",letterSpacing:2,fontWeight:700}}>กิจกรรมในห้องเรียน</div>
-                  <span className="badge" style={{background:"rgba(170,143,240,.2)",border:"1px solid rgba(170,143,240,.4)",color:"#aa8ff0",fontSize:9}}>{chLogs.length} กิจกรรม</span>
-                </div>
-                {[...chLogs].reverse().map((log:any,i:number)=>(
-                  <div key={i} className="card" style={{display:"flex",alignItems:"center",gap:14,marginBottom:8,marginLeft:16,borderColor:"rgba(170,143,240,.3)"}}>
-                    <div style={{fontSize:22}}>⭐</div>
-                    <div style={{flex:1}}>
-                      <span className="badge" style={{background:"rgba(94,200,126,.14)",border:"1px solid rgba(94,200,126,.4)",color:"var(--green)",marginBottom:4,display:"inline-block"}}>✓ ได้รับแล้ว</span>
-                      <div style={{fontSize:13,fontWeight:600,color:"#fff",marginTop:4}}>{log.activity}</div>
-                      <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{log.date}</div>
-                    </div>
-                    <div className="mono" style={{fontSize:16,fontWeight:700,color:"var(--gold)"}}>+{log.xp} XP</div>
+            {(()=>{
+              const allChActNames=[...new Set(
+                (students||[]).flatMap((st:any)=>(st.xpLog||[])
+                  .filter((l:any)=>(l.chapterId||"CH1")===ch.id)
+                  .map((l:any)=>l.activity))
+              )];
+              if(allChActNames.length===0&&chLogs.length===0)return null;
+              const allActs=[...new Set([...allChActNames,...chLogs.map((l:any)=>l.activity)])];
+              if(allActs.length===0)return null;
+              return(
+                <div style={{marginBottom:8}}>
+                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,paddingLeft:4}}>
+                    <span style={{fontSize:16}}>🏫</span>
+                    <div className="mono" style={{fontSize:10,color:"#aa8ff0",letterSpacing:2,fontWeight:700}}>กิจกรรมในห้องเรียน</div>
+                    <span className="badge" style={{background:"rgba(170,143,240,.2)",border:"1px solid rgba(170,143,240,.4)",color:"#aa8ff0",fontSize:9}}>{allActs.length} กิจกรรม</span>
                   </div>
-                ))}
-              </div>
-            )}
+                  {allActs.map((actName:any,i:number)=>{
+                    const myLog=chLogs.find((l:any)=>l.activity===actName);
+                    return(
+                      <div key={i} className="card" style={{display:"flex",alignItems:"center",gap:14,marginBottom:8,marginLeft:16,
+                        borderColor:myLog?"rgba(170,143,240,.3)":"rgba(232,96,96,.25)",
+                        background:myLog?"var(--bg2)":"rgba(232,96,96,.04)"}}>
+                        <div style={{fontSize:22}}>{myLog?"⭐":"⏳"}</div>
+                        <div style={{flex:1}}>
+                          {myLog
+                            ?<span className="badge" style={{background:"rgba(94,200,126,.14)",border:"1px solid rgba(94,200,126,.4)",color:"var(--green)",marginBottom:4,display:"inline-block"}}>✓ ได้รับแล้ว</span>
+                            :<span className="badge" style={{background:"rgba(232,96,96,.1)",border:"1px solid rgba(232,96,96,.3)",color:"var(--red)",marginBottom:4,display:"inline-block"}}>⏳ ค้างส่ง</span>
+                          }
+                          <div style={{fontSize:13,fontWeight:600,color:myLog?"#fff":"#f5b8b8",marginTop:3}}>{actName}</div>
+                          {myLog
+                            ?<div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{myLog.date}</div>
+                            :<div style={{fontSize:11,color:"var(--red)",marginTop:2}}>กรุณาติดต่อส่งงานกับครู</div>
+                          }
+                        </div>
+                        {myLog
+                          ?<div className="mono" style={{fontSize:16,fontWeight:700,color:"var(--gold)"}}>+{myLog.xp} XP</div>
+                          :<div className="mono" style={{fontSize:14,color:"var(--muted)"}}>— XP</div>
+                        }
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
           </div>
         );
       })}
