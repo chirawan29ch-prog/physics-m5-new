@@ -901,7 +901,7 @@ function StudentAssignments({student,assignments,setStudents}){
       <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:3,marginBottom:20}}>MISSION BOARD — {assignments.length} OBJECTIVES</div>
       {CHAPTERS.map(ch=>{
         const chA=assignments.filter(a=>a.chapterId===ch.id);
-        const chLogs=(student.xpLog||[]).filter((l:any)=>l.chapterId===ch.id);
+        const chLogs=(student.xpLog||[]).filter((l:any)=>(l.chapterId||'CH1')===ch.id);
         if(!chA.length&&!chLogs.length)return null;
         return(
           <div key={ch.id} style={{marginBottom:32}}>
@@ -980,26 +980,7 @@ function StudentAssignments({student,assignments,setStudents}){
           </div>
         );
       })}
-      {/* กิจกรรมที่ไม่ได้ระบุบท (legacy) */}
-      {(student.xpLog||[]).filter((l:any)=>!l.chapterId).length>0&&(
-        <div style={{marginBottom:28}}>
-          <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10}}>
-            <span style={{fontSize:16}}>🏫</span>
-            <div className="mono" style={{fontSize:10,color:"#aa8ff0",letterSpacing:2,fontWeight:700}}>กิจกรรมอื่นๆ</div>
-          </div>
-          {[...(student.xpLog||[])].filter((l:any)=>!l.chapterId).reverse().map((log:any,i:number)=>(
-            <div key={i} className="card" style={{display:"flex",alignItems:"center",gap:14,marginBottom:8,borderColor:"rgba(170,143,240,.3)"}}>
-              <div style={{fontSize:22}}>⭐</div>
-              <div style={{flex:1}}>
-                <span className="badge" style={{background:"rgba(94,200,126,.14)",border:"1px solid rgba(94,200,126,.4)",color:"var(--green)",marginBottom:4,display:"inline-block"}}>✓ ได้รับแล้ว</span>
-                <div style={{fontSize:13,fontWeight:600,color:"#fff",marginTop:4}}>{log.activity}</div>
-                <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{log.date}</div>
-              </div>
-              <div className="mono" style={{fontSize:16,fontWeight:700,color:"var(--gold)"}}>+{log.xp} XP</div>
-            </div>
-          ))}
-        </div>
-      )}
+{/* กิจกรรมเก่าที่ไม่มี chapterId ถูก default ไป CH1 แล้ว ไม่ต้องแสดง section นี้อีก */}
       {/* ── XP รวมทั้งหมด ── */}
       {(()=>{
         const xpFromSubs=Object.values(student.submissions||{}).reduce((s:number,sub:any)=>s+(sub?.graded?sub.xpEarned||0:0),0);
@@ -1688,8 +1669,23 @@ function TeacherScores({students,setStudents}){
   const [activityName,setActivityName]=useState("");
   const [selChapter,setSelChapter]=useState("CH1");
   const [msg,setMsg]=useState(null);
+  const [editAct,setEditAct]=useState<any>(null); // {oldName, newName, newChapterId}
 
   function toast(t,isErr=false){setMsg({text:t,err:isErr});setTimeout(()=>setMsg(null),3500);}
+
+  function saveEditActivity(){
+    if(!editAct)return;
+    const{oldName,newName,newChapterId}=editAct;
+    if(!newName.trim()){toast("กรุณาใส่ชื่อกิจกรรม",true);return;}
+    setStudents(prev=>prev.map(s=>({
+      ...s,
+      xpLog:(s.xpLog||[]).map((log:any)=>log.activity===oldName
+        ?{...log,activity:newName.trim(),chapterId:newChapterId}
+        :log)
+    })));
+    toast(`✅ แก้ไข "${oldName}" → "${newName}" สำเร็จ!`);
+    setEditAct(null);
+  }
 
   function toggleMulti(id){
     setSelMulti(prev=>prev.includes(id)?prev.filter(x=>x!==id):[...prev,id]);
@@ -1721,7 +1717,7 @@ function TeacherScores({students,setStudents}){
     const map={};
     students.forEach(s=>{
       (s.xpLog||[]).forEach(log=>{
-        if(!map[log.activity])map[log.activity]={name:log.activity,entries:{}};
+        if(!map[log.activity])map[log.activity]={name:log.activity,chapterId:log.chapterId||"CH1",entries:{}};
         map[log.activity].entries[s.id]={xp:log.xp,date:log.date};
       });
     });
@@ -1868,6 +1864,29 @@ function TeacherScores({students,setStudents}){
         </>
       )}
 
+      {editAct&&(
+        <div className="overlay">
+          <div className="card card-gold" style={{width:"100%",maxWidth:480}}>
+            <div className="cond" style={{fontSize:22,color:"var(--gold)",letterSpacing:2,marginBottom:20}}>✏️ แก้ไขกิจกรรม</div>
+            <div style={{marginBottom:14}}>
+              <label className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,display:"block",marginBottom:8}}>บทเรียน</label>
+              <select className="input" value={editAct.newChapterId} onChange={e=>setEditAct({...editAct,newChapterId:e.target.value})}>
+                {CHAPTERS.map(c=><option key={c.id} value={c.id}>{c.icon} {c.label} {c.title}</option>)}
+              </select>
+            </div>
+            <div style={{marginBottom:20}}>
+              <label className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,display:"block",marginBottom:8}}>ชื่อกิจกรรม</label>
+              <input className="input" value={editAct.newName} onChange={e=>setEditAct({...editAct,newName:e.target.value})}
+                placeholder="ชื่อกิจกรรม"/>
+              <div style={{fontSize:11,color:"var(--muted)",marginTop:6}}>จะแก้ไขกิจกรรมชื่อนี้ในทุกนักเรียนที่ได้รับ</div>
+            </div>
+            <div style={{display:"flex",gap:10}}>
+              <button className="btn btn-gold" onClick={saveEditActivity} style={{flex:1,fontSize:15,padding:12}}>💾 บันทึก</button>
+              <button className="btn-outline" onClick={()=>setEditAct(null)} style={{flex:1}}>ยกเลิก</button>
+            </div>
+          </div>
+        </div>
+      )}
       {tab==="summary"&&(
         <div>
           {allActivities.length===0?(
@@ -1883,14 +1902,16 @@ function TeacherScores({students,setStudents}){
               return(
                 <div key={ai} className="card" style={{marginBottom:16,borderColor:"rgba(232,188,85,.35)"}}>
                   <div style={{display:"flex",justifyContent:"space-between",alignItems:"flex-start",marginBottom:14,flexWrap:"wrap",gap:8}}>
-                    <div>
+                    <div style={{flex:1}}>
                       <div className="cond" style={{fontSize:20,fontWeight:700,color:"var(--gold2)"}}>{act.name}</div>
-                      <div style={{display:"flex",gap:8,marginTop:6}}>
+                      <div style={{display:"flex",gap:8,marginTop:6,flexWrap:"wrap"}}>
                         <span className="badge" style={{background:"rgba(94,200,126,.14)",border:"1px solid rgba(94,200,126,.4)",color:"var(--green)"}}>✓ ได้รับ {receivedCount} คน</span>
                         <span className="badge" style={{background:"rgba(232,96,96,.1)",border:"1px solid rgba(232,96,96,.28)",color:"var(--red)"}}>— ยังไม่ได้ {students.length-receivedCount} คน</span>
                         <span className="mono" style={{fontSize:11,color:"var(--gold)",padding:"3px 8px"}}>รวม {totalGiven.toLocaleString()} XP</span>
                       </div>
                     </div>
+                    <button className="btn-ghost" onClick={()=>setEditAct({oldName:act.name,newName:act.name,newChapterId:act.chapterId||"CH1"})}
+                      style={{fontSize:12,padding:"6px 14px",flexShrink:0}}>✏️ แก้ไข</button>
                   </div>
                   <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(200px,1fr))",gap:8}}>
                     {sortedStudents.map(s=>{
