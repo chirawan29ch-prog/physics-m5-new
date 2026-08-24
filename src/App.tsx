@@ -153,77 +153,73 @@ function playAirdropSound(){
 }
 
 // ─────────────────────────────────────────────
-// VENICE BACKGROUND — สว่างขึ้น
+// PHYSICS BACKGROUND — ภาพจริง + อนุภาคสไตล์ฟิสิกส์
 // ─────────────────────────────────────────────
-function VeniceBackground(){
+const PHYSICS_IMG_DAY = "https://i.postimg.cc/RVGwSXJh/a8d4de59513d2b1ca0a346c0c7fd039c.jpg";
+const PHYSICS_IMG_NIGHT = "https://i.postimg.cc/13kXsqB0/wp13416836.png";
+const PHYSICS_FORMULAS = ["E=mc\u00b2","F=ma","\u03bb=h/p","v=f\u03bb","p=mv","\u0394E=hf","a=\u0394v/\u0394t"];
+
+function PhysicsDayBackground(){
   return(
     <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none",overflow:"hidden"}}>
-      <div style={{position:"absolute",inset:0,background:"linear-gradient(180deg,#0f1e35 0%,#162840 25%,#1e3a6a 50%,#224265 70%,#1a3050 100%)"}}/>
-      <div style={{position:"absolute",right:"18%",top:"36%",width:100,height:100,borderRadius:"50%",
-        background:"radial-gradient(circle,rgba(255,210,100,.45) 0%,rgba(255,160,60,.18) 50%,transparent 70%)",
-        filter:"blur(8px)"}}/>
-      {Array.from({length:35},(_,i)=>(
+      <div style={{position:"absolute",inset:0,
+        backgroundImage:`url("${PHYSICS_IMG_DAY}")`,
+        backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}}/>
+      <div style={{position:"absolute",inset:0,background:"rgba(10,20,45,.32)"}}/>
+      {PHYSICS_FORMULAS.slice(0,5).map((f,i)=>(
+        <div key={i} style={{position:"absolute",left:`${8+i*20}%`,top:`${14+(i%3)*22}%`,
+          fontFamily:"'Share Tech Mono',monospace",fontSize:13+(i%3)*3,color:"rgba(255,255,255,.4)",
+          animation:`float ${3+i*.4}s ease-in-out infinite`,animationDelay:`${i*.3}s`}}>{f}</div>
+      ))}
+      {[{r:64,top:"16%",right:"10%",dur:6,c:"#fff"},{r:40,bottom:"16%",left:"8%",dur:8,c:"#ffe090"}].map((o,i)=>(
+        <div key={i} style={{position:"absolute",width:o.r,height:o.r,
+          top:o.top,left:o.left,right:o.right,bottom:o.bottom,
+          border:`1px solid ${o.c}66`,borderRadius:"50%",
+          animation:`spin ${o.dur}s linear infinite`}}>
+          <div style={{position:"absolute",top:-3,left:"50%",width:6,height:6,marginLeft:-3,
+            borderRadius:"50%",background:o.c,boxShadow:`0 0 8px ${o.c}`}}/>
+        </div>
+      ))}
+      <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at center,transparent 42%,rgba(8,18,35,.4) 100%)"}}/>
+    </div>
+  );
+}
+
+function PhysicsBackground(){
+  return(
+    <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none",overflow:"hidden"}}>
+      <div style={{position:"absolute",inset:0,
+        backgroundImage:`url("${PHYSICS_IMG_NIGHT}")`,
+        backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}}/>
+      <div style={{position:"absolute",inset:0,background:"rgba(5,8,25,.45)"}}/>
+      {Array.from({length:50},(_,i)=>(
         <div key={i} style={{position:"absolute",borderRadius:"50%",background:"#fff",
-          width:1.5,height:1.5,left:`${Math.random()*100}%`,top:`${Math.random()*40}%`,
-          opacity:Math.random()*.6+.15,animation:`pulse ${2+Math.random()*3}s ease-in-out infinite`,
-          animationDelay:`${Math.random()*4}s`}}/>
+          width:Math.random()*2+.5,height:Math.random()*2+.5,
+          left:`${(i*17)%100}%`,top:`${(i*11)%55}%`,
+          opacity:(i%5)*.15+.1,animation:`pulse ${1.5+(i%5)*.5}s ease-in-out infinite`,
+          animationDelay:`${(i%8)*.5}s`}}/>
       ))}
-      <div style={{position:"absolute",right:"8%",top:"9%",width:48,height:48,borderRadius:"50%",
-        background:"radial-gradient(circle at 38% 35%,#fff9e0,#d4c06090)",
-        boxShadow:"0 0 34px rgba(220,200,100,.5),0 0 70px rgba(220,200,100,.18)"}}/>
-      <div style={{position:"absolute",left:0,right:0,top:"60%",height:"8%",
-        background:"linear-gradient(0deg,transparent,rgba(255,170,70,.09))",filter:"blur(6px)"}}/>
-      <svg style={{position:"absolute",bottom:"26%",left:0,width:"100%"}} height="130" viewBox="0 0 1400 130" preserveAspectRatio="none">
-        <defs>
-          <linearGradient id="bldg" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#1e3858"/>
-            <stop offset="100%" stopColor="#122438"/>
-          </linearGradient>
-        </defs>
-        <path d="M0,130 L0,85 L50,85 L50,65 L65,55 L80,65 L80,85 L110,85 L110,50 L120,38 L130,50 L130,85 L165,85 L165,70 L180,58 L195,70 L195,85 L220,85 L220,55 L235,42 L240,32 L245,42 L260,55 L260,85 L295,85 L295,68 L310,56 L325,68 L325,85 L350,85 L350,72 L365,62 L365,72 L385,72 L385,85 L415,85 L415,50 L425,38 L432,28 L439,38 L450,50 L450,85 L480,85 L480,62 L495,50 L510,62 L510,85 L540,85 L540,70 L555,58 L555,70 L575,70 L575,85 L605,85 L605,52 L618,40 L625,30 L632,40 L645,52 L645,85 L675,85 L675,65 L690,53 L705,65 L705,85 L735,85 L735,72 L748,62 L748,72 L765,72 L765,85 L795,85 L795,50 L808,38 L815,28 L822,38 L835,50 L835,85 L865,85 L865,65 L878,53 L893,65 L893,85 L920,85 L920,72 L933,62 L946,72 L946,85 L975,85 L975,52 L988,40 L995,30 L1002,40 L1015,52 L1015,85 L1045,85 L1045,68 L1058,56 L1073,68 L1073,85 L1100,85 L1100,55 L1113,42 L1118,32 L1123,42 L1138,55 L1138,85 L1168,85 L1168,70 L1181,58 L1196,70 L1196,85 L1220,85 L1220,50 L1233,38 L1240,28 L1247,38 L1260,50 L1260,85 L1290,85 L1290,65 L1305,53 L1320,65 L1320,85 L1350,85 L1350,72 L1365,60 L1380,72 L1380,85 L1400,85 L1400,130 Z" fill="url(#bldg)"/>
-        <ellipse cx="240" cy="30" rx="14" ry="11" fill="#1a2e48"/>
-        <ellipse cx="625" cy="28" rx="14" ry="11" fill="#1a2e48"/>
-        <ellipse cx="815" cy="26" rx="14" ry="11" fill="#1a2e48"/>
-        <ellipse cx="1240" cy="26" rx="14" ry="11" fill="#1a2e48"/>
-        <rect x="428" y="8" width="9" height="35" fill="#142438"/>
-        <polygon points="428,8 432.5,0 437,8" fill="#142438"/>
-        <rect x="1113" y="8" width="9" height="35" fill="#142438"/>
-        <polygon points="1113,8 1117.5,0 1122,8" fill="#142438"/>
-        {[[90,65],[155,72],[310,62],[490,65],[690,68],[880,68],[1065,62],[1180,65]].map(([x,y],i)=>(
-          <rect key={i} x={x} y={y} width="5" height="4" rx="1" fill="#ffe08055" opacity=".8"/>
-        ))}
-      </svg>
-      <div style={{position:"absolute",bottom:"16%",left:0,right:0,height:"10%",
-        background:"linear-gradient(180deg,rgba(36,68,120,.65) 0%,rgba(24,50,90,.45) 100%)"}}/>
-      <div style={{position:"absolute",bottom:0,left:0,right:0,height:"26%",
-        background:"linear-gradient(180deg,#162840 0%,#1e3a58 35%,#224060 70%,#1a3248 100%)",
-        borderTop:"1px solid rgba(120,180,240,.22)"}}>
-        {Array.from({length:9},(_,i)=>(
-          <div key={i} style={{position:"absolute",left:"3%",right:"3%",height:1,
-            background:`rgba(120,180,240,${.08+i*.012})`,
-            top:`${12+i*9}%`,borderRadius:2,
-            animation:`waterShimmer ${2.5+i*.4}s ease-in-out infinite`,animationDelay:`${i*.35}s`}}/>
-        ))}
-        <div style={{position:"absolute",top:0,left:"18%",width:6,height:"55%",
-          background:"linear-gradient(180deg,rgba(255,230,100,.22),transparent)",borderRadius:3,
-          animation:"waterShimmer 3s ease-in-out infinite"}}/>
-        <div style={{position:"absolute",top:0,right:"22%",width:4,height:"40%",
-          background:"linear-gradient(180deg,rgba(255,230,100,.16),transparent)",borderRadius:3,
-          animation:"waterShimmer 3.5s ease-in-out infinite",animationDelay:"1s"}}/>
-        <div style={{position:"absolute",bottom:"32%",left:"12%",animation:"gondola 4s ease-in-out infinite",fontSize:30,filter:"drop-shadow(0 3px 6px rgba(0,0,0,.6))"}}>🛶</div>
-        <div style={{position:"absolute",bottom:"22%",right:"18%",animation:"gondola 5s ease-in-out infinite",animationDelay:"1.8s",fontSize:22,opacity:.75,filter:"drop-shadow(0 3px 6px rgba(0,0,0,.6))"}}>🛶</div>
-        <div style={{position:"absolute",bottom:"28%",left:"55%",animation:"gondola 6s ease-in-out infinite",animationDelay:".8s",fontSize:18,opacity:.55,filter:"drop-shadow(0 3px 6px rgba(0,0,0,.5))"}}>🛶</div>
-      </div>
-      {[6,18,32,46,60,74,88].map((l,i)=>(
-        <div key={i} style={{position:"absolute",left:`${l}%`,bottom:"25.5%",
-          width:5,height:5,borderRadius:"50%",background:"#ffe090",
-          boxShadow:`0 0 10px rgba(255,220,80,.9),0 0 24px rgba(255,200,60,.4)`,
-          animation:`pulse ${1.8+i*.25}s ease-in-out infinite`,animationDelay:`${i*.45}s`}}/>
+      {PHYSICS_FORMULAS.map((f,i)=>(
+        <div key={i} style={{position:"absolute",left:`${(i*13+5)%90}%`,top:`${(i*17+8)%60}%`,
+          fontFamily:"'Share Tech Mono',monospace",fontSize:11+(i%3)*3,color:"rgba(167,139,250,.35)",
+          animation:`float ${3+i*.4}s ease-in-out infinite`,animationDelay:`${i*.35}s`}}>{f}</div>
       ))}
-      <div style={{position:"absolute",inset:0,opacity:.04,
-        backgroundImage:"linear-gradient(rgba(120,180,240,.5) 1px,transparent 1px),linear-gradient(90deg,rgba(120,180,240,.5) 1px,transparent 1px)",
-        backgroundSize:"60px 60px"}}/>
-      <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at center,transparent 40%,rgba(8,18,35,.45) 100%)"}}/>
+      {[{r:60,top:"20%",left:"12%",dur:5,c:"#5aaee8"},{r:44,top:"58%",right:"14%",dur:7,c:"#e8bc55"},{r:76,bottom:"14%",left:"48%",dur:9,c:"#f472b6"}].map((o,i)=>(
+        <div key={i} style={{position:"absolute",width:o.r,height:o.r,
+          top:o.top,left:o.left,right:o.right,bottom:o.bottom,
+          border:`1px solid ${o.c}55`,borderRadius:"50%",
+          animation:`spin ${o.dur}s linear infinite`}}>
+          <div style={{position:"absolute",top:-3,left:"50%",width:6,height:6,marginLeft:-3,
+            borderRadius:"50%",background:o.c,boxShadow:`0 0 8px ${o.c}`}}/>
+        </div>
+      ))}
+      {Array.from({length:8},(_,i)=>(
+        <div key={i} style={{position:"absolute",left:`${10+i*11}%`,bottom:"6%",
+          width:4,height:4,borderRadius:"50%",background:"#a8d8ff",
+          boxShadow:"0 0 8px rgba(168,216,255,.9)",
+          animation:`float ${4+i*.5}s ease-in-out infinite`,animationDelay:`${i*.6}s`}}/>
+      ))}
+      <div style={{position:"absolute",inset:0,background:"radial-gradient(ellipse at center,transparent 40%,rgba(5,8,25,.4) 100%)"}}/>
     </div>
   );
 }
@@ -554,7 +550,7 @@ function LoginScreen({students,onLogin}){
   }
   return(
     <div style={{minHeight:"100vh",display:"flex",alignItems:"center",justifyContent:"center",padding:24,position:"relative"}}>
-      <VeniceBackground/>
+      <PhysicsDayBackground/>
       <div style={{position:"relative",zIndex:1,width:"100%",maxWidth:420}}>
         <div className="fade-up" style={{textAlign:"center",marginBottom:32}}>
           <div style={{display:"flex",gap:14,justifyContent:"center",fontSize:52,marginBottom:12,animation:"float 3s ease-in-out infinite"}}>
@@ -562,7 +558,7 @@ function LoginScreen({students,onLogin}){
           </div>
           <div className="cond" style={{fontSize:56,fontWeight:900,letterSpacing:6,color:"var(--gold2)",lineHeight:1,textShadow:"0 0 40px rgba(232,188,85,.6)"}}>PHYSICS</div>
           <div className="cond" style={{fontSize:22,fontWeight:600,letterSpacing:14,color:"var(--muted2)",marginTop:2}}>BATTLEGROUND</div>
-          <div className="mono" style={{fontSize:11,color:"var(--muted)",marginTop:8,letterSpacing:3}}>── VENICE SEASON 2568 ──</div>
+          <div className="mono" style={{fontSize:11,color:"var(--muted)",marginTop:8,letterSpacing:3}}>── QUANTUM SEASON 2568 ──</div>
         </div>
         <div className="card fade-up" style={{animationDelay:".1s",background:"rgba(18,36,62,.9)",backdropFilter:"blur(20px)",border:"1px solid rgba(232,188,85,.3)"}}>
           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:4,marginBottom:22,background:"rgba(18,32,52,.8)",borderRadius:6,padding:4}}>
@@ -595,7 +591,7 @@ function LoginScreen({students,onLogin}){
             <button className="btn btn-gold" onClick={doLogin} style={{marginTop:4}}>▶  DEPLOY INTO ZONE</button>
           </div>
           <div style={{height:1,background:"var(--border)",margin:"14px 0"}}/>
-          <div className="mono" style={{fontSize:10,color:"var(--muted)",textAlign:"center",letterSpacing:1}}>PHYSICS BATTLEGROUND © 2568 · VENICE EDITION</div>
+          <div className="mono" style={{fontSize:10,color:"var(--muted)",textAlign:"center",letterSpacing:1}}>PHYSICS BATTLEGROUND © 2568 · QUANTUM EDITION</div>
         </div>
       </div>
     </div>
@@ -606,7 +602,7 @@ function LoginScreen({students,onLogin}){
 // TOP NAV
 // ─────────────────────────────────────────────
 function TopNav({user,role,page,setPage,onLogout}){
-  const sTabs=[{id:"dashboard",label:"DASHBOARD"},{id:"resources",label:"เนื้อหา"},{id:"assignments",label:"ส่งงาน"},{id:"ranking",label:"TOP 3"},{id:"inventory",label:"AIRDROP"},{id:"settings",label:"ตั้งค่า"}];
+  const sTabs=[{id:"dashboard",label:"DASHBOARD"},{id:"resources",label:"บทเรียน"},{id:"assignments",label:"ส่งงาน"},{id:"ranking",label:"TOP 3"},{id:"inventory",label:"AIRDROP"},{id:"settings",label:"ตั้งค่า"}];
   const tTabs=[{id:"overview",label:"OVERVIEW"},{id:"students",label:"STUDENTS"},{id:"t-assignments",label:"📋 งาน"},{id:"t-resources",label:"📁 ไฟล์"},{id:"t-scores",label:"⭐ XP"},{id:"t-exam",label:"📝 สอบ"},{id:"t-grades",label:"📊 คะแนน"},{id:"t-airdrop",label:"📦 AIRDROP"},{id:"ranking",label:"RANKING"}];
   const tabs=role==="teacher"?tTabs:sTabs;
   return(
@@ -642,7 +638,7 @@ function TopNav({user,role,page,setPage,onLogout}){
 // ─────────────────────────────────────────────
 const PAGE_META = {
   dashboard:      {label:"DASHBOARD",    back:null},
-  resources:      {label:"เนื้อหา / สไลด์",back:"dashboard"},
+  resources:      {label:"บทเรียน / สไลด์",back:"dashboard"},
   assignments:    {label:"ส่งงาน",        back:"dashboard"},
   ranking:        {label:"TOP 3 RANKING", back:"dashboard"},
   inventory:      {label:"AIRDROP รางวัล",back:"dashboard"},
@@ -813,39 +809,7 @@ function StudentDashboard({student,students,assignments,setPage,setStudents}){
         </div>
       </div>
       <ScoreBreakdown student={student} assignments={assignments}/>
-      {/* XP Activity Log */}
-      {(student.xpLog||[]).length>0&&(
-        <div className="card" style={{marginBottom:16}}>
-          <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:3,marginBottom:14}}>⭐ ประวัติ XP ที่ได้รับ</div>
-          <div style={{display:"flex",flexDirection:"column",gap:6}}>
-            {[...(student.xpLog||[])].reverse().map((log,i)=>(
-              <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 14px",
-                background:"rgba(232,188,85,.06)",border:"1px solid rgba(232,188,85,.2)",borderRadius:8}}>
-                <div style={{fontSize:20}}>⭐</div>
-                <div style={{flex:1}}>
-                  <div style={{fontSize:14,fontWeight:600,color:"var(--text)"}}>{log.activity}</div>
-                  <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{log.date}</div>
-                </div>
-                <div className="mono" style={{fontSize:16,fontWeight:700,color:"var(--gold)"}}>+{log.xp} XP</div>
-              </div>
-            ))}
-          </div>
-          <div style={{marginTop:12,padding:"10px 14px",background:"rgba(232,188,85,.08)",
-            border:"1px solid rgba(232,188,85,.22)",borderRadius:8,
-            display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-            <span style={{fontSize:13,color:"var(--muted2)"}}>รวม XP จากกิจกรรมพิเศษ</span>
-            <span className="mono" style={{fontSize:15,color:"var(--gold)",fontWeight:700}}>
-              {(student.xpLog||[]).reduce((s,l)=>s+l.xp,0).toLocaleString()} XP
-            </span>
-          </div>
-        </div>
-      )}
       <GradeTable/>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12,marginTop:16}}>
-        <button className="btn btn-cyan" onClick={()=>setPage("assignments")} style={{padding:14}}>📋 ดูงานทั้งหมด</button>
-        <button className="btn-outline" onClick={()=>setPage("resources")} style={{padding:14}}>📚 เนื้อหา/สไลด์</button>
-        <button className="btn-outline" onClick={()=>setPwModal(true)} style={{padding:14,borderColor:"rgba(232,188,85,.45)",color:"var(--gold)"}}>🔐 เปลี่ยนรหัสผ่าน</button>
-      </div>
     </div>
   );
 }
@@ -853,6 +817,8 @@ function StudentDashboard({student,students,assignments,setPage,setStudents}){
 // ─────────────────────────────────────────────
 // STUDENT: ASSIGNMENTS
 // ─────────────────────────────────────────────
+function xpToScore(xp){return Math.round((xp||0)/25);}
+
 function StudentAssignments({student,students,assignments,setStudents}){
   const [uploadModal,setUploadModal]=useState(null);
   const [driveLink,setDriveLink]=useState("");
@@ -875,14 +841,37 @@ function StudentAssignments({student,students,assignments,setStudents}){
     }));
   }
   function replaceFile(id){removeSubmission(id);const a=assignments.find(x=>x.id===id);if(a)setUploadModal(a);}
+
+  // ── รวมภาระงาน + กิจกรรมในห้องเรียน แล้วแบ่งกลุ่มตามแท็กก่อน/หลังกลางภาค ──
+  const chOf=(id)=>CHAPTERS.find(c=>c.id===id)||CHAPTERS[0];
+  const taskItems=assignments.map(a=>({
+    kind:"task",key:a.id,a,ch:chOf(a.chapterId),
+    phase:a.phase||"before",
+    sub:student.submissions?.[a.id],
+    tm:TYPE_META[a.type]||{}
+  }));
+  const allActNames=[...new Set((students||[]).flatMap((st:any)=>(st.xpLog||[]).map((l:any)=>l.activity)))];
+  const actItems=allActNames.map((actName:any)=>{
+    const allEntries=(students||[]).flatMap((st:any)=>(st.xpLog||[]).filter((l:any)=>l.activity===actName));
+    const fullXp=allEntries.reduce((m:number,l:any)=>Math.max(m,l.xp||0),0);
+    const phase=allEntries[0]?.phase||"before";
+    const chapterId=allEntries[0]?.chapterId||"CH1";
+    const myLog=(student.xpLog||[]).find((l:any)=>l.activity===actName);
+    return{kind:"activity",key:"act_"+actName,actName,fullXp,phase,ch:chOf(chapterId),myLog};
+  });
+  const allItems=[...taskItems,...actItems];
+  const groups=[
+    {phase:"before",label:"ก่อนกลางภาค",dot:"#a78bfa",tint:"rgba(167,139,250,.15)",text:"#a78bfa"},
+    {phase:"after", label:"หลังกลางภาค",dot:"#f472b6",tint:"rgba(244,114,182,.15)",text:"#f472b6"},
+  ];
+
   return(
     <div className="fade-up" style={{padding:20,maxWidth:900,margin:"0 auto"}}>
       {uploadModal&&(
         <div className="overlay">
           <div className="card card-cyan" style={{width:"100%",maxWidth:480}}>
             <div className="cond" style={{fontSize:22,color:"var(--cyan)",letterSpacing:2,marginBottom:4}}>📎 ส่งงาน</div>
-            <div style={{color:"var(--muted2)",fontSize:13,marginBottom:4}}>{uploadModal.title}</div>
-            <div className="mono" style={{color:"var(--gold)",fontSize:13,marginBottom:20}}>+{uploadModal.xp} XP</div>
+            <div style={{color:"var(--muted2)",fontSize:13,marginBottom:4}}>{uploadModal.title} <span style={{color:"var(--muted)"}}>(เต็ม {uploadModal.xp} XP / {xpToScore(uploadModal.xp)} คะแนน)</span></div>
             <div style={{marginBottom:14}}>
               <label className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,display:"block",marginBottom:8}}>🔗 ลิงก์ Google Drive</label>
               <input className="input" value={driveLink} onChange={e=>setDriveLink(e.target.value)}
@@ -893,137 +882,83 @@ function StudentAssignments({student,students,assignments,setStudents}){
             </div>
             <div style={{display:"flex",gap:10}}>
               <button className="btn btn-cyan" onClick={submitWork} disabled={!driveLink.trim()}
-                style={{flex:1,opacity:driveLink.trim()?1:.4}}>✅ ส่งงาน (+{uploadModal.xp} XP)</button>
+                style={{flex:1,opacity:driveLink.trim()?1:.4}}>✅ ส่งงาน</button>
               <button className="btn-outline" onClick={()=>setUploadModal(null)} style={{flex:1}}>ยกเลิก</button>
             </div>
           </div>
         </div>
       )}
       <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:3,marginBottom:20}}>MISSION BOARD — {assignments.length} OBJECTIVES</div>
-      {CHAPTERS.map(ch=>{
-        const chA=assignments.filter(a=>a.chapterId===ch.id);
-        const chLogs=(student.xpLog||[]).filter((l:any)=>(l.chapterId||'CH1')===ch.id);
-        const allChActNames=[...new Set((students||[]).flatMap((st:any)=>(st.xpLog||[]).filter((l:any)=>(l.chapterId||"CH1")===ch.id).map((l:any)=>l.activity)))];
-        if(!chA.length&&!chLogs.length&&allChActNames.length===0)return null;
+      {groups.map(g=>{
+        const items=allItems.filter((it:any)=>it.phase===g.phase);
+        if(items.length===0)return null;
         return(
-          <div key={ch.id} style={{marginBottom:32}}>
-            {/* ── Chapter Header ── */}
-            <div style={{display:"flex",alignItems:"center",gap:12,marginBottom:16,paddingBottom:10,borderBottom:`2px solid ${ch.color}50`}}>
-              <span style={{fontSize:28}}>{ch.icon}</span>
-              <div>
-                <div className="mono" style={{fontSize:9,color:"var(--muted)",letterSpacing:2}}>{ch.label}</div>
-                <div className="cond" style={{fontSize:24,fontWeight:700,color:ch.color}}>{ch.title}</div>
-              </div>
+          <div key={g.phase} style={{marginBottom:32}}>
+            <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:16,paddingBottom:10,borderBottom:`2px solid ${g.dot}50`}}>
+              <span style={{width:12,height:12,borderRadius:3,background:g.dot,display:"inline-block"}}></span>
+              <div className="cond" style={{fontSize:22,fontWeight:700,color:g.text,letterSpacing:1}}>{g.label}</div>
+              <span className="badge" style={{background:g.tint,border:`1px solid ${g.dot}66`,color:g.text,fontSize:9}}>{items.length} รายการ</span>
             </div>
-
-            {/* ── ภาระงาน ── */}
-            {chA.length>0&&(
-              <div style={{marginBottom:16}}>
-                <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,paddingLeft:4}}>
-                  <span style={{fontSize:16}}>📝</span>
-                  <div className="mono" style={{fontSize:10,color:"var(--muted2)",letterSpacing:2,fontWeight:700}}>ภาระงาน</div>
-                  <span className="badge" style={{background:`${ch.color}15`,border:`1px solid ${ch.color}40`,color:ch.color,fontSize:9}}>{chA.length} งาน</span>
-                </div>
-                {chA.map(a=>{
-                  const sub=student.submissions?.[a.id];const tm=TYPE_META[a.type]||{};
-                  return(
-                    <div key={a.id} className="card" style={{display:"flex",gap:16,alignItems:"center",marginBottom:8,marginLeft:16,
-                      borderColor:sub?`${ch.color}50`:"var(--border)",background:sub?`linear-gradient(135deg,var(--bg2),${ch.bg})`:"var(--bg2)"}}>
-                      <div style={{fontSize:28,flexShrink:0}}>{tm.icon||"📄"}</div>
-                      <div style={{flex:1,minWidth:0}}>
-                        <div style={{display:"flex",gap:8,marginBottom:6,flexWrap:"wrap"}}>
-                          <span className="badge" style={{background:`${tm.color}20`,border:`1px solid ${tm.color}50`,color:tm.color}}>{tm.label}</span>
-                          {sub?<span className="badge" style={{background:"rgba(94,200,126,.14)",border:"1px solid rgba(94,200,126,.4)",color:"var(--green)"}}>✓ ส่งแล้ว</span>
-                             :<span className="badge" style={{background:"rgba(232,96,96,.1)",border:"1px solid rgba(232,96,96,.3)",color:"var(--red)"}}>⏳ ยังไม่ส่ง</span>}
-                        </div>
-                        <div style={{fontSize:14,fontWeight:600,color:"#fff",marginBottom:4}}>{a.title}</div>
-                        <div style={{fontSize:12,color:"var(--muted)"}}>{a.desc} · ครบกำหนด {a.due}</div>
-                        {sub&&<div style={{fontSize:12,marginTop:4}}>
-                          <a href={sub.file} target="_blank" rel="noreferrer" style={{color:"var(--cyan)"}}>🔗 ดูไฟล์งาน</a>
-                          <span style={{color:"var(--muted)"}}> · {sub.submittedAt}</span>
-                          <span style={{marginLeft:8,color:sub.graded?"var(--gold)":"var(--muted)",fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
-                            {sub.graded?`⭐ ${sub.xpEarned} / ${sub.maxXp||a.xp} XP`:"⏳ รอครูตรวจ"}
-                          </span>
-                        </div>}
+            {items.map((it:any)=>{
+              if(it.kind==="task"){
+                const a=it.a,sub=it.sub,tm=it.tm,ch=it.ch;
+                return(
+                  <div key={it.key} className="card" style={{display:"flex",gap:16,alignItems:"center",marginBottom:8,
+                    borderColor:sub?`${ch.color}50`:"var(--border)",background:sub?`linear-gradient(135deg,var(--bg2),${ch.bg})`:"var(--bg2)"}}>
+                    <div style={{fontSize:28,flexShrink:0}}>{tm.icon||"📄"}</div>
+                    <div style={{flex:1,minWidth:0}}>
+                      <div style={{display:"flex",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+                        <span className="badge" style={{background:`${ch.color}18`,border:`1px solid ${ch.color}45`,color:ch.color,fontSize:9}}>{ch.icon} {ch.label}</span>
+                        <span className="badge" style={{background:`${tm.color}20`,border:`1px solid ${tm.color}50`,color:tm.color}}>{tm.label}</span>
+                        {sub?<span className="badge" style={{background:"rgba(94,200,126,.14)",border:"1px solid rgba(94,200,126,.4)",color:"var(--green)"}}>✓ ส่งแล้ว</span>
+                           :<span className="badge" style={{background:"rgba(232,96,96,.1)",border:"1px solid rgba(232,96,96,.3)",color:"var(--red)"}}>⏳ ยังไม่ส่ง</span>}
                       </div>
-                      <div style={{textAlign:"center",flexShrink:0}}><div className="mono" style={{fontSize:14,color:"var(--gold)",fontWeight:700}}>+{a.xp}</div><div style={{fontSize:10,color:"var(--muted)"}}>XP</div></div>
-                      <div style={{display:"flex",flexDirection:"column",gap:6,flexShrink:0}}>
-                        {!sub&&<button className="btn btn-cyan" onClick={()=>openUpload(a)} style={{padding:"8px 14px",fontSize:12}}>📎 แนบลิงก์</button>}
-                        {sub&&<button className="btn-ghost" onClick={()=>replaceFile(a.id)} style={{fontSize:11}}>🔄 เปลี่ยน</button>}
-                        {sub&&<button className="btn btn-red" onClick={()=>removeSubmission(a.id)} style={{padding:"6px 12px",fontSize:11}}>🗑 ลบ</button>}
-                      </div>
+                      <div style={{fontSize:14,fontWeight:600,color:"#fff",marginBottom:4}}>{a.title} <span style={{fontSize:12,color:"var(--muted)",fontWeight:400}}>(เต็ม {a.xp} XP / {xpToScore(a.xp)} คะแนน)</span></div>
+                      <div style={{fontSize:12,color:"var(--muted)"}}>{a.desc} · ครบกำหนด {a.due}</div>
+                      {sub&&<div style={{fontSize:12,marginTop:4}}>
+                        <a href={sub.file} target="_blank" rel="noreferrer" style={{color:"var(--cyan)"}}>🔗 ดูไฟล์งาน</a>
+                        <span style={{color:"var(--muted)"}}> · {sub.submittedAt}</span>
+                        <span style={{marginLeft:8,color:sub.graded?"var(--gold)":"var(--muted)",fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>
+                          {sub.graded?`${sub.xpEarned} XP (${xpToScore(sub.xpEarned)} คะแนน)`:"⏳ รอครูตรวจ"}
+                        </span>
+                      </div>}
                     </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* ── กิจกรรมในห้องเรียน ── */}
-            {(()=>{
-              const allChActNames=[...new Set(
-                (students||[]).flatMap((st:any)=>(st.xpLog||[])
-                  .filter((l:any)=>(l.chapterId||"CH1")===ch.id)
-                  .map((l:any)=>l.activity))
-              )];
-              if(allChActNames.length===0&&chLogs.length===0)return null;
-              const allActs=[...new Set([...allChActNames,...chLogs.map((l:any)=>l.activity)])];
-              if(allActs.length===0)return null;
-              return(
-                <div style={{marginBottom:8}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:10,paddingLeft:4}}>
-                    <span style={{fontSize:16}}>🏫</span>
-                    <div className="mono" style={{fontSize:10,color:"#aa8ff0",letterSpacing:2,fontWeight:700}}>กิจกรรมในห้องเรียน</div>
-                    <span className="badge" style={{background:"rgba(170,143,240,.2)",border:"1px solid rgba(170,143,240,.4)",color:"#aa8ff0",fontSize:9}}>{allActs.length} กิจกรรม</span>
+                    <div style={{display:"flex",flexDirection:"column",gap:6,flexShrink:0}}>
+                      {!sub&&<button className="btn btn-cyan" onClick={()=>openUpload(a)} style={{padding:"8px 14px",fontSize:12}}>📎 แนบลิงก์</button>}
+                      {sub&&<button className="btn-ghost" onClick={()=>replaceFile(a.id)} style={{fontSize:11}}>🔄 เปลี่ยน</button>}
+                      {sub&&<button className="btn btn-red" onClick={()=>removeSubmission(a.id)} style={{padding:"6px 12px",fontSize:11}}>🗑 ลบ</button>}
+                    </div>
                   </div>
-                  {allActs.map((actName:any,i:number)=>{
-                    const myLog=chLogs.find((l:any)=>l.activity===actName);
-                    return(
-                      <div key={i} className="card" style={{display:"flex",alignItems:"center",gap:14,marginBottom:8,marginLeft:16,
-                        borderColor:myLog?"rgba(170,143,240,.3)":"rgba(232,96,96,.25)",
-                        background:myLog?"var(--bg2)":"rgba(232,96,96,.04)"}}>
-                        <div style={{fontSize:22}}>{myLog?"⭐":"⏳"}</div>
-                        <div style={{flex:1}}>
-                          {myLog
-                            ?<span className="badge" style={{background:"rgba(94,200,126,.14)",border:"1px solid rgba(94,200,126,.4)",color:"var(--green)",marginBottom:4,display:"inline-block"}}>✓ ได้รับแล้ว</span>
-                            :<span className="badge" style={{background:"rgba(232,96,96,.1)",border:"1px solid rgba(232,96,96,.3)",color:"var(--red)",marginBottom:4,display:"inline-block"}}>⏳ ค้างส่ง</span>
-                          }
-                          <div style={{fontSize:13,fontWeight:600,color:myLog?"#fff":"#f5b8b8",marginTop:3}}>{actName}</div>
-                          {myLog
-                            ?<div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>{myLog.date}</div>
-                            :<div style={{fontSize:11,color:"var(--red)",marginTop:2}}>กรุณาติดต่อส่งงานกับครู</div>
-                          }
+                );
+              }
+              const{actName,fullXp,ch,myLog}=it;
+              return(
+                <div key={it.key} className="card" style={{display:"flex",alignItems:"center",gap:14,marginBottom:8,
+                  borderColor:myLog?"rgba(170,143,240,.3)":"var(--border)",
+                  background:myLog?"var(--bg2)":"rgba(232,96,96,.04)"}}>
+                  <div style={{fontSize:26,flexShrink:0}}>🏫</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+                      <span className="badge" style={{background:`${ch.color}18`,border:`1px solid ${ch.color}45`,color:ch.color,fontSize:9}}>{ch.icon} {ch.label}</span>
+                      <span className="badge" style={{background:"rgba(170,143,240,.2)",border:"1px solid rgba(170,143,240,.4)",color:"#aa8ff0",fontSize:9}}>กิจกรรม</span>
+                      {myLog?<span className="badge" style={{background:"rgba(94,200,126,.14)",border:"1px solid rgba(94,200,126,.4)",color:"var(--green)"}}>✓ ส่งแล้ว</span>
+                            :<span className="badge" style={{background:"rgba(232,96,96,.1)",border:"1px solid rgba(232,96,96,.3)",color:"var(--red)"}}>⏳ ยังไม่ส่ง</span>}
+                    </div>
+                    <div style={{fontSize:14,fontWeight:600,color:myLog?"#fff":"#f5b8b8",marginBottom:4}}>{actName} <span style={{fontSize:12,color:"var(--muted)",fontWeight:400}}>(เต็ม {fullXp} XP / {xpToScore(fullXp)} คะแนน)</span></div>
+                    {myLog
+                      ?<div style={{fontSize:12,marginTop:4}}>
+                          <span style={{color:"var(--muted)"}}>{myLog.date}</span>
+                          <span style={{marginLeft:8,color:"var(--gold)",fontFamily:"'Share Tech Mono',monospace",fontSize:11}}>{myLog.xp} XP ({xpToScore(myLog.xp)} คะแนน)</span>
                         </div>
-                        {myLog
-                          ?<div className="mono" style={{fontSize:16,fontWeight:700,color:"var(--gold)"}}>+{myLog.xp} XP</div>
-                          :<div className="mono" style={{fontSize:14,color:"var(--muted)"}}>— XP</div>
-                        }
-                      </div>
-                    );
-                  })}
+                      :<div style={{fontSize:11,color:"var(--red)",marginTop:2}}>กรุณาติดต่อครู</div>
+                    }
+                  </div>
                 </div>
               );
-            })()}
+            })}
           </div>
         );
       })}
-{/* กิจกรรมเก่าที่ไม่มี chapterId ถูก default ไป CH1 แล้ว ไม่ต้องแสดง section นี้อีก */}
-      {/* ── XP รวมทั้งหมด ── */}
-      {(()=>{
-        const xpFromSubs=Object.values(student.submissions||{}).reduce((s:number,sub:any)=>s+(sub?.graded?sub.xpEarned||0:0),0);
-        const xpFromLog=(student.xpLog||[]).reduce((s:number,l:any)=>s+l.xp,0);
-        const total=xpFromSubs+xpFromLog;
-        if(total===0)return null;
-        return(
-          <div style={{padding:"14px 18px",background:"rgba(232,188,85,.08)",border:"1px solid rgba(232,188,85,.3)",
-            borderRadius:10,display:"flex",justifyContent:"space-between",alignItems:"center",marginTop:8,marginBottom:20}}>
-            <div>
-              <div style={{fontSize:13,color:"var(--muted2)"}}>XP รวมทั้งหมด</div>
-              <div style={{fontSize:11,color:"var(--muted)",marginTop:2}}>งานส่ง {xpFromSubs.toLocaleString()} + กิจกรรม {xpFromLog.toLocaleString()} XP</div>
-            </div>
-            <div className="mono" style={{fontSize:24,fontWeight:700,color:"var(--gold2)"}}>{total.toLocaleString()} XP</div>
-          </div>
-        );
-      })()}
     </div>
   );
 }
@@ -1032,7 +967,7 @@ function StudentResources({resources}){
   const ti={pdf:"📄",ppt:"📊",doc:"📝",img:"🖼️",zip:"📦",link:"🔗"};
   return(
     <div className="fade-up" style={{padding:20,maxWidth:900,margin:"0 auto"}}>
-      <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:3,marginBottom:20}}>📚 เนื้อหาและสไลด์</div>
+      <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:3,marginBottom:20}}>📚 บทเรียนและสไลด์</div>
       {CHAPTERS.map(ch=>{const chR=resources.filter(r=>r.chapterId===ch.id);return(
         <div key={ch.id} style={{marginBottom:24}}>
           <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10,paddingBottom:8,borderBottom:`1px solid ${ch.color}35`}}>
@@ -1596,11 +1531,10 @@ function TeacherStudents({students,assignments,setStudents}){
         <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,marginBottom:14}}>SUBMISSION STATUS</div>
         {assignments.map(a=>{const sub=s.submissions?.[a.id];const tm=TYPE_META[a.type]||{};return(
           <div key={a.id} style={{display:"flex",alignItems:"center",gap:12,padding:"10px 0",borderBottom:"1px solid var(--border)"}}>
-            <span>{tm.icon||"📄"}</span><span style={{flex:1,fontSize:13}}>{a.title}</span>
-            <span className="mono" style={{fontSize:11,color:"var(--gold)"}}>+{a.xp} XP</span>
+            <span>{tm.icon||"📄"}</span><span style={{flex:1,fontSize:13}}>{a.title} <span style={{color:"var(--muted)",fontSize:11}}>(เต็ม {a.xp} XP / {xpToScore(a.xp)} คะแนน)</span></span>
             {sub?<>
               <a href={sub.file} target="_blank" rel="noreferrer" style={{fontSize:11,color:"var(--cyan)"}}>🔗 ดูงาน</a>
-              <span className="mono" style={{fontSize:11,color:"var(--gold)"}}>{sub.xpEarned||0}/{sub.maxXp||a.xp} XP</span>
+              <span className="mono" style={{fontSize:11,color:"var(--gold)"}}>{sub.xpEarned||0} XP ({xpToScore(sub.xpEarned||0)} คะแนน)</span>
               <button className="btn-ghost" onClick={()=>setEditSubModal({
                 assignmentId:a.id,
                 xpEarned:sub.xpEarned||0,
@@ -1959,7 +1893,7 @@ function TeacherAssignments({assignments,setAssignments,students,setStudents}){
                 <div key={a.id} className="card" style={{display:"flex",alignItems:"center",gap:14,marginBottom:8,borderColor:`${ch.color}25`}}>
                   <div style={{fontSize:24,flexShrink:0}}>{tm.icon||"📄"}</div>
                   <div style={{flex:1,minWidth:0}}>
-                    <div style={{fontSize:14,fontWeight:600,color:"#fff"}}>{a.title}</div>
+                    <div style={{fontSize:14,fontWeight:600,color:"#fff"}}>{a.title} <span style={{fontSize:11,color:"var(--muted)",fontWeight:400}}>(เต็ม {a.xp} XP / {xpToScore(a.xp)} คะแนน)</span></div>
                     <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>{a.desc} · {a.due}</div>
                     <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
                       <span className="badge" style={{background:"rgba(94,200,126,.12)",border:"1px solid rgba(94,200,126,.35)",color:"var(--green)"}}>✓ {submittedCount}/{students.length} คน</span>
@@ -1973,7 +1907,7 @@ function TeacherAssignments({assignments,setAssignments,students,setStudents}){
                       </button>
                     </div>
                   </div>
-                  <div className="mono" style={{color:"var(--gold)",fontSize:13,flexShrink:0}}>+{a.xp} XP</div>
+                  <div className="mono" style={{color:"var(--gold)",fontSize:13,flexShrink:0,textAlign:"center"}}>{a.xp} XP<div style={{fontSize:10,color:"var(--muted)"}}>{xpToScore(a.xp)} คะแนน</div></div>
                   <button className="btn btn-cyan" onClick={()=>openCheck(a)} style={{padding:"8px 16px",fontSize:13,flexShrink:0}}>👁 ตรวจ</button>
                   <button className="btn btn-red" onClick={()=>del(a.id)} style={{padding:"7px 12px",fontSize:13,flexShrink:0}}>🗑</button>
                 </div>
@@ -3145,7 +3079,7 @@ export default function App(){
   return(
     <>
       <style>{G}</style>
-      <VeniceBackground/>
+      <PhysicsBackground/>
       {activePopup&&role==="student"&&<AirdropPopup airdrop={activePopup} onClaim={()=>{
         setStudents(prev=>prev.map(s=>s.id===userId?{...s,inventory:s.inventory.map((it:any)=>it.name===activePopup.name?{...it,seen:true}:it)}:s));
         setActivePopup(null);
