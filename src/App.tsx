@@ -107,13 +107,13 @@ function getRank(xp){return XP_RANKS.find(r=>xp>=r.minXP)||XP_RANKS[XP_RANKS.len
 // MOCK DATA
 // ─────────────────────────────────────────────
 const INIT_ASSIGNMENTS = [
-  {id:"A1",chapterId:"CH1",title:"ใบกิจกรรม 1.1: การเคลื่อนที่แบบ SHM",xp:300,due:"30 พ.ค. 2568",desc:"คำนวณแรงดัน กระแส ความต้านทาน",type:"worksheet",createdAt:"20 พ.ค. 2568"},
-  {id:"A2",chapterId:"CH1",title:"แบบทดสอบ 1.2: พลังงานใน SHM",xp:400,due:"5 มิ.ย. 2568",desc:"30 ข้อ multiple choice",type:"quiz",createdAt:"20 พ.ค. 2568"},
-  {id:"A3",chapterId:"CH2",title:"ใบกิจกรรม 2.1: สมบัติของคลื่น",xp:350,due:"12 มิ.ย. 2568",desc:"ทดลองสนามแม่เหล็ก",type:"lab",createdAt:"20 พ.ค. 2568"},
-  {id:"A4",chapterId:"CH2",title:"แบบทดสอบ 2.2: คลื่นเสียง",xp:300,due:"18 มิ.ย. 2568",desc:"Boyle's & Charles' Law",type:"worksheet",createdAt:"21 พ.ค. 2568"},
-  {id:"A5",chapterId:"CH3",title:"ใบกิจกรรม 3.1: การแทรกสอดของแสง",xp:400,due:"24 มิ.ย. 2568",desc:"30 ข้อ multiple choice",type:"quiz",createdAt:"21 พ.ค. 2568"},
-  {id:"A6",chapterId:"CH3",title:"Lab 3.2: การเลี้ยวเบนของแสง",xp:350,due:"30 มิ.ย. 2568",desc:"หลักของอาร์คิมิดีส",type:"worksheet",createdAt:"22 พ.ค. 2568"},
-  {id:"A7",chapterId:"CH4",title:"ใบกิจกรรม 4.1: กฎของสเนลล์",xp:400,due:"5 ก.ค. 2568",desc:"Pascal & Bernoulli",type:"lab",createdAt:"22 พ.ค. 2568"},
+  {id:"A1",chapterId:"CH1",title:"ใบกิจกรรม 1.1: การเคลื่อนที่แบบ SHM",xp:300,due:"30 พ.ค. 2568",desc:"คำนวณแรงดัน กระแส ความต้านทาน",type:"worksheet",phase:"before",createdAt:"20 พ.ค. 2568"},
+  {id:"A2",chapterId:"CH1",title:"แบบทดสอบ 1.2: พลังงานใน SHM",xp:400,due:"5 มิ.ย. 2568",desc:"30 ข้อ multiple choice",type:"quiz",phase:"before",createdAt:"20 พ.ค. 2568"},
+  {id:"A3",chapterId:"CH2",title:"ใบกิจกรรม 2.1: สมบัติของคลื่น",xp:350,due:"12 มิ.ย. 2568",desc:"ทดลองสนามแม่เหล็ก",type:"lab",phase:"before",createdAt:"20 พ.ค. 2568"},
+  {id:"A4",chapterId:"CH2",title:"แบบทดสอบ 2.2: คลื่นเสียง",xp:300,due:"18 มิ.ย. 2568",desc:"Boyle's & Charles' Law",type:"worksheet",phase:"before",createdAt:"21 พ.ค. 2568"},
+  {id:"A5",chapterId:"CH3",title:"ใบกิจกรรม 3.1: การแทรกสอดของแสง",xp:400,due:"24 มิ.ย. 2568",desc:"30 ข้อ multiple choice",type:"quiz",phase:"before",createdAt:"21 พ.ค. 2568"},
+  {id:"A6",chapterId:"CH3",title:"Lab 3.2: การเลี้ยวเบนของแสง",xp:350,due:"30 มิ.ย. 2568",desc:"หลักของอาร์คิมิดีส",type:"worksheet",phase:"before",createdAt:"22 พ.ค. 2568"},
+  {id:"A7",chapterId:"CH4",title:"ใบกิจกรรม 4.1: กฎของสเนลล์",xp:400,due:"5 ก.ค. 2568",desc:"Pascal & Bernoulli",type:"lab",phase:"before",createdAt:"22 พ.ค. 2568"},
 ];
 const INIT_RESOURCES = [];
 const INIT_STUDENTS = [
@@ -681,12 +681,13 @@ function PageHeader({page,setPage}){
 // ─────────────────────────────────────────────
 function ScoreBreakdown({student, assignments}){
   const MAX_HALF=35, MAX_MID=15, MAX_FINAL=15;
-  const half=Math.ceil((assignments||[]).length/2);
-  const first=(assignments||[]).slice(0,half);
-  const second=(assignments||[]).slice(half);
-  function earnedXP(list){return list.reduce((s,a)=>{const sub=student.submissions?.[a.id];return s+(sub?sub.xpEarned||0:0);},0);}
-  const score1=Math.min(MAX_HALF,Math.round(earnedXP(first)/25));
-  const score2=Math.min(MAX_HALF,Math.round(earnedXP(second)/25));
+  // แบ่งคะแนนเก็บก่อน/หลังกลางภาคตามแท็กของใบงาน+กิจกรรม (ไม่ใช้เกณฑ์ XP สะสมอีกต่อไป)
+  const before=(assignments||[]).filter(a=>(a.phase||"before")==="before");
+  const after=(assignments||[]).filter(a=>(a.phase||"before")==="after");
+  function earnedXP(list){return list.reduce((s,a)=>{const sub=student.submissions?.[a.id];return s+(sub?.graded?sub.xpEarned||0:0);},0);}
+  const logXP=(phase)=>(student.xpLog||[]).reduce((s,l)=>(l.phase||"before")===phase?s+(l.xp||0):s,0);
+  const score1=Math.min(MAX_HALF,Math.round((earnedXP(before)+logXP("before"))/25));
+  const score2=Math.min(MAX_HALF,Math.round((earnedXP(after)+logXP("after"))/25));
   const scoreMid=student.midterm, scoreFinal=student.final;
   const totalAnnounced=score1+score2+(scoreMid!==null?scoreMid:0)+(scoreFinal!==null?scoreFinal:0);
   const maxAnnounced=MAX_HALF+MAX_HALF+(scoreMid!==null?MAX_MID:0)+(scoreFinal!==null?MAX_FINAL:0);
@@ -1611,13 +1612,16 @@ function TeacherStudents({students,assignments,setStudents}){
             </>:<span className="badge" style={{background:"rgba(232,96,96,.1)",border:"1px solid rgba(232,96,96,.25)",color:"var(--red)"}}>⏳ ยังไม่ส่ง</span>}
           </div>
         );})}</div>
-      {/* คะแนนรายส่วน */}
+      {/* คะแนนรายส่วน — แบ่งตามแท็กก่อน/หลังกลางภาคของใบงาน/กิจกรรม */}
       {(()=>{
-        const HALF_XP=1250;
-        const xpFirst=Math.min(s.xp,HALF_XP);
-        const xpSecond=Math.max(0,s.xp-HALF_XP);
-        const sc1=Math.min(35,Math.round(xpFirst/25));
-        const sc2=Math.min(35,Math.round(xpSecond/25));
+        const xpFromAssign=(phase)=>(assignments||[]).reduce((sum,a)=>{
+          if((a.phase||"before")!==phase)return sum;
+          const sub=s.submissions?.[a.id];
+          return sum+(sub?.graded?sub.xpEarned||0:0);
+        },0);
+        const xpFromLog=(phase)=>(s.xpLog||[]).reduce((sum,l)=>(l.phase||"before")===phase?sum+(l.xp||0):sum,0);
+        const sc1=Math.min(35,Math.round((xpFromAssign("before")+xpFromLog("before"))/25));
+        const sc2=Math.min(35,Math.round((xpFromAssign("after")+xpFromLog("after"))/25));
         const sections=[
           {label:"เก็บก่อนกลางภาค",color:"#185FA5",score:sc1,max:35},
           {label:"สอบกลางภาค",color:"#5DCAA5",score:s.midterm??null,max:15,editable:true},
@@ -1749,7 +1753,7 @@ function TeacherStudents({students,assignments,setStudents}){
 // ─────────────────────────────────────────────
 function TeacherAssignments({assignments,setAssignments,students,setStudents}){
   const [modal,setModal]=useState(false);
-  const [form,setForm]=useState({chapterId:"CH1",title:"",xp:200,due:"",desc:"",type:"worksheet"});
+  const [form,setForm]=useState({chapterId:"CH1",title:"",xp:200,due:"",desc:"",type:"worksheet",phase:"before"});
   const [checkModal,setCheckModal]=useState(null);
   const [editXp,setEditXp]=useState({});
   const [editMaxXp,setEditMaxXp]=useState(""); // XP เต็มของงานที่กำลังตรวจ
@@ -1758,9 +1762,11 @@ function TeacherAssignments({assignments,setAssignments,students,setStudents}){
     if(!form.title.trim())return;
     const today=new Date().toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"numeric"});
     setAssignments(prev=>[...prev,{...form,id:"A"+Date.now(),xp:Number(form.xp),createdAt:today}]);
-    setModal(false);setForm({chapterId:"CH1",title:"",xp:200,due:"",desc:"",type:"worksheet"});
+    setModal(false);setForm({chapterId:"CH1",title:"",xp:200,due:"",desc:"",type:"worksheet",phase:"before"});
   }
   function del(id){if(window.confirm("ลบงานนี้?"))setAssignments(prev=>prev.filter(a=>a.id!==id));}
+  // เปลี่ยนแท็กก่อน/หลังกลางภาคของใบงานที่มีอยู่แล้ว — ไม่กระทบคะแนน/การส่งงานเดิม
+  function setPhase(id,phase){setAssignments(prev=>prev.map(a=>a.id===id?{...a,phase}:a));}
 
   function openCheck(a){
     setCheckModal(a);
@@ -1840,6 +1846,19 @@ function TeacherAssignments({assignments,setAssignments,students,setStudents}){
                 <select className="input" value={form.type} onChange={e=>setForm(p=>({...p,type:e.target.value}))}>
                   {Object.entries(TYPE_META).map(([k,v])=><option key={k} value={k}>{v.icon} {v.label}</option>)}
                 </select>
+              </div>
+            </div>
+            <div style={{marginBottom:20}}>
+              <label className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,display:"block",marginBottom:7}}>ช่วงเวลา</label>
+              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>
+                {[["before","🟣 ก่อนกลางภาค"],["after","🔵 หลังกลางภาค"]].map(([v,l])=>(
+                  <button key={v} type="button" onClick={()=>setForm(p=>({...p,phase:v}))} className="btn"
+                    style={{background:form.phase===v?"rgba(232,188,85,.18)":"rgba(255,255,255,.05)",
+                      border:`1px solid ${form.phase===v?"rgba(232,188,85,.6)":"var(--border)"}`,
+                      color:form.phase===v?"var(--gold)":"var(--muted2)",
+                      borderRadius:6,padding:"10px 6px",fontSize:12,
+                      fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,letterSpacing:.5}}>{l}</button>
+                ))}
               </div>
             </div>
             <div style={{display:"flex",gap:10}}>
@@ -1942,9 +1961,16 @@ function TeacherAssignments({assignments,setAssignments,students,setStudents}){
                   <div style={{flex:1,minWidth:0}}>
                     <div style={{fontSize:14,fontWeight:600,color:"#fff"}}>{a.title}</div>
                     <div style={{fontSize:12,color:"var(--muted)",marginTop:2}}>{a.desc} · {a.due}</div>
-                    <div style={{display:"flex",gap:6,marginTop:6}}>
+                    <div style={{display:"flex",gap:6,marginTop:6,flexWrap:"wrap"}}>
                       <span className="badge" style={{background:"rgba(94,200,126,.12)",border:"1px solid rgba(94,200,126,.35)",color:"var(--green)"}}>✓ {submittedCount}/{students.length} คน</span>
                       {submittedCount<students.length&&<span className="badge" style={{background:"rgba(232,96,96,.1)",border:"1px solid rgba(232,96,96,.25)",color:"var(--red)"}}>⏳ ค้าง {students.length-submittedCount}</span>}
+                      <button onClick={()=>setPhase(a.id,(a.phase||"before")==="before"?"after":"before")}
+                        className="badge" style={{cursor:"pointer",border:"none",
+                          background:(a.phase||"before")==="before"?"rgba(167,139,250,.15)":"rgba(244,114,182,.15)",
+                          color:(a.phase||"before")==="before"?"#a78bfa":"#f472b6"}}
+                        title="คลิกเพื่อสลับ">
+                        {(a.phase||"before")==="before"?"🟣 ก่อนกลางภาค":"🔵 หลังกลางภาค"}
+                      </button>
                     </div>
                   </div>
                   <div className="mono" style={{color:"var(--gold)",fontSize:13,flexShrink:0}}>+{a.xp} XP</div>
@@ -2052,6 +2078,7 @@ function TeacherScores({students,setStudents}){
   const [xpAmt,setXpAmt]=useState("");
   const [activityName,setActivityName]=useState("");
   const [selChapter,setSelChapter]=useState("CH1");
+  const [selPhase,setSelPhase]=useState("before");
   const [msg,setMsg]=useState(null);
   const [editAct,setEditAct]=useState<any>(null); // {oldName, newName, newChapterId}
 
@@ -2081,7 +2108,7 @@ function TeacherScores({students,setStudents}){
     if(targetMode==="single"&&!selStu){toast("กรุณาเลือกนักเรียน",true);return;}
     if(targetMode==="multi"&&selMulti.length===0){toast("กรุณาเลือกนักเรียนอย่างน้อย 1 คน",true);return;}
     const today=new Date().toLocaleDateString("th-TH",{day:"numeric",month:"short",year:"numeric"});
-    const logEntry={activity:activityName.trim(),xp:Number(xpAmt),date:today,chapterId:selChapter};
+    const logEntry={activity:activityName.trim(),xp:Number(xpAmt),date:today,chapterId:selChapter,phase:selPhase};
     if(targetMode==="all"){
       setStudents(prev=>prev.map(s=>({...s,xp:s.xp+Number(xpAmt),xpLog:[...(s.xpLog||[]),logEntry]})));
       toast(`✅ เพิ่ม ${xpAmt} XP จาก "${activityName}" ให้ทุกคน ${students.length} คน!`);
@@ -2094,7 +2121,7 @@ function TeacherScores({students,setStudents}){
       setStudents(prev=>prev.map(s=>s.id===selStu?{...s,xp:s.xp+Number(xpAmt),xpLog:[...(s.xpLog||[]),logEntry]}:s));
       toast(`✅ เพิ่ม ${xpAmt} XP จาก "${activityName}" ให้ ${name}!`);
     }
-    setXpAmt("");setActivityName("");setSelStu("");setSelChapter("CH1");
+    setXpAmt("");setActivityName("");setSelStu("");setSelChapter("CH1");setSelPhase("before");
   }
 
   const allActivities=useMemo(()=>{
@@ -2146,11 +2173,26 @@ function TeacherScores({students,setStudents}){
                   placeholder="เช่น ตอบคำถาม, แบบทดสอบ"/>
               </div>
             </div>
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:16}}>
+            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
               <div>
                 <label className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,display:"block",marginBottom:8}}>จำนวน XP</label>
                 <input className="input" type="number" value={xpAmt} onChange={e=>setXpAmt(e.target.value)} placeholder="เช่น 200"/>
               </div>
+              <div>
+                <label className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,display:"block",marginBottom:8}}>ช่วงเวลา</label>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:6}}>
+                  {[["before","🟣 ก่อนกลางภาค"],["after","🔵 หลังกลางภาค"]].map(([v,l])=>(
+                    <button key={v} onClick={()=>setSelPhase(v)} className="btn"
+                      style={{background:selPhase===v?"rgba(232,188,85,.18)":"rgba(255,255,255,.05)",
+                        border:`1px solid ${selPhase===v?"rgba(232,188,85,.6)":"var(--border)"}`,
+                        color:selPhase===v?"var(--gold)":"var(--muted2)",
+                        borderRadius:6,padding:"10px 6px",fontSize:11,
+                        fontFamily:"'Barlow Condensed',sans-serif",fontWeight:700,letterSpacing:.5}}>{l}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div style={{marginBottom:16}}>
               <div>
                 <label className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,display:"block",marginBottom:8}}>ให้คะแนน</label>
                 <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:6}}>
@@ -2331,8 +2373,7 @@ function TeacherScores({students,setStudents}){
 // ─────────────────────────────────────────────
 // TEACHER: GRADES SUMMARY + PRE/POST TEST
 // ─────────────────────────────────────────────
-function TeacherGrades({students,setStudents}){
-  const HALF_XP=1250;
+function TeacherGrades({students,setStudents,assignments}){
   const [tabG,setTabG]=useState("score");
   const [maxPP,setMaxPP]=useState(20);
   const [ppScores,setPpScores]=useState<any>(()=>{
@@ -2347,8 +2388,17 @@ function TeacherGrades({students,setStudents}){
   });
 
   function xpToScore(xp:number,max:number){return Math.min(max,Math.round(xp/25));}
-  function getS1(s:any){return xpToScore(Math.min(s.xp,HALF_XP),35);}
-  function getS2(s:any){return xpToScore(Math.max(0,s.xp-HALF_XP),35);}
+  function xpByPhase(s:any,phase:string){
+    const fromAssign=(assignments||[]).reduce((sum:number,a:any)=>{
+      if((a.phase||"before")!==phase)return sum;
+      const sub=s.submissions?.[a.id];
+      return sum+(sub?.graded?sub.xpEarned||0:0);
+    },0);
+    const fromLog=(s.xpLog||[]).reduce((sum:number,l:any)=>(l.phase||"before")===phase?sum+(l.xp||0):sum,0);
+    return fromAssign+fromLog;
+  }
+  function getS1(s:any){return xpToScore(xpByPhase(s,"before"),35);}
+  function getS2(s:any){return xpToScore(xpByPhase(s,"after"),35);}
   function getTotal(s:any){
     if(s.midterm===null||s.midterm===undefined||s.final===null||s.final===undefined)return null;
     return getS1(s)+(s.midterm||0)+getS2(s)+(s.final||0);
@@ -3133,7 +3183,7 @@ export default function App(){
           {role==="teacher"&&page==="t-resources"  &&<TeacherResources resources={resources} setResources={setResources}/>}
           {role==="teacher"&&page==="t-scores"     &&<TeacherScores students={students} setStudents={setStudents}/>}
           {role==="teacher"&&page==="t-exam"       &&<TeacherExamScores students={students} setStudents={setStudents}/>}
-          {role==="teacher"&&page==="t-grades"     &&<TeacherGrades students={students} setStudents={setStudents}/>}
+          {role==="teacher"&&page==="t-grades"     &&<TeacherGrades students={students} setStudents={setStudents} assignments={assignments}/>}
           {role==="teacher"&&page==="t-airdrop"    &&<TeacherAirdrop students={students} setPendingAirdrop={setPendingAirdrop} setStudents={setStudents}/>}
           {role==="teacher"&&page==="ranking"      &&<RankingPage students={students} myId={undefined} isTeacher={true}/>}
         </main>
