@@ -3048,7 +3048,7 @@ function TeacherAirdrop({students,setPendingAirdrop,setStudents}){
 // ─────────────────────────────────────────────
 // GOOGLE APPS SCRIPT API — แก้ไขแล้ว
 // ─────────────────────────────────────────────
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzRbyKEQZMpFVVokRgmhAxe2IUxAL4cFmD-40OUWGlIjrb39PedymrwYh6UNMBZNgua/exec";
+const GAS_URL = "https://script.google.com/macros/s/AKfycbwXtFzTVHNA-d5GZ7ebn9yk_a0DiPkOhHVseB1EakGnWsB3IiET2rBzm19aA8f7lQpR/exec";
 
 async function gasGet(){
   try{
