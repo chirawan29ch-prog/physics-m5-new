@@ -2548,11 +2548,15 @@ function TeacherGrades({students,setStudents,assignments}){
           scales:{x:{grid:{display:false},ticks:{color:"#555"}},y:{beginAtZero:true,ticks:{stepSize:1,color:"#555"},max:students.length,grid:{color:"rgba(0,0,0,.06)"}}},
           animation:{onComplete:function(e:any){
             const ctx=e.chart.ctx;
-            ctx.font="bold 13px 'Share Tech Mono',monospace";
+            ctx.font="bold 12px 'Share Tech Mono',monospace";
             ctx.fillStyle="#333";ctx.textAlign="center";ctx.textBaseline="bottom";
+            const dsTotals=e.chart.data.datasets.map((ds:any)=>ds.data.reduce((s:number,v:number)=>s+v,0));
             e.chart.data.datasets.forEach(function(ds:any,di:number){
               e.chart.getDatasetMeta(di).data.forEach(function(bar:any,bi:number){
-                const v=ds.data[bi];if(v>0)ctx.fillText(v,bar.x,bar.y-4);
+                const v=ds.data[bi];
+                const total=dsTotals[di];
+                const pct=total>0?Math.round(v/total*100):0;
+                if(v>0)ctx.fillText(`${v} (${pct}%)`,bar.x,bar.y-4);
               });
             });
           }}
@@ -2751,11 +2755,19 @@ function TeacherGrades({students,setStudents,assignments}){
                         </div>
                       </td>
                       <td style={{padding:"8px",textAlign:"center"}}>
-                        {(pg&&qg)?<div style={{display:"inline-flex",alignItems:"center",justifyContent:"center",gap:8,background:abg,border:aborder,borderRadius:20,padding:"5px 14px"}}>
-                          <div style={{width:16,height:16,borderRadius:"50%",background:pg.bg}}></div>
-                          <span style={{fontSize:16,fontWeight:900,color:"#111",width:18,textAlign:"center",display:"inline-block"}}>{arr}</span>
-                          <div style={{width:16,height:16,borderRadius:"50%",background:qg.bg}}></div>
-                        </div>:<span style={{fontSize:11,color:"#999"}}>รอกรอก</span>}
+                        {(pg&&qg)?(()=>{
+                          const status=same?{label:"คงเดิม",c:"#9ca3af",bg:"#f3f4f6"}:up?{label:"ดีขึ้น",c:"#22c55e",bg:"#f0fdf4"}:{label:"ลดลง",c:"#ef4444",bg:"#fff1f2"};
+                          return(
+                            <div style={{display:"inline-flex",alignItems:"center",gap:8}}>
+                              <span style={{display:"inline-flex",alignItems:"center",gap:5}}>
+                                <span style={{width:8,height:8,borderRadius:"50%",background:pg.bg,display:"inline-block"}}></span>
+                                <span style={{width:14,height:1.5,background:"#d1d5db",display:"inline-block"}}></span>
+                                <span style={{width:8,height:8,borderRadius:"50%",background:qg.bg,display:"inline-block"}}></span>
+                              </span>
+                              <span style={{display:"inline-flex",alignItems:"center",borderLeft:`3px solid ${status.c}`,background:status.bg,borderRadius:"0 5px 5px 0",padding:"4px 10px",fontSize:12,color:"#333"}}>{status.label}</span>
+                            </div>
+                          );
+                        })():<span style={{fontSize:11,color:"#999"}}>รอกรอก</span>}
                       </td>
                     </tr>
                   );
@@ -2777,7 +2789,7 @@ function TeacherGrades({students,setStudents,assignments}){
               <div className="cond" style={{fontSize:18,color:"#333",marginBottom:14}}>สรุปการเปลี่ยนแปลง</div>
               <div style={{display:"flex",flexDirection:"column",gap:10,marginBottom:14}}>
                 {[{arr:"⬆",ac:"#16a34a",bg:"#f0fdf4",border:"1px solid #bbf7d0",n:ppUp,label:"พัฒนา เลื่อนกลุ่มสูงขึ้น"},
-                  {arr:"→",ac:"#92400e",bg:"#fefce8",border:"1px solid #fde68a",n:ppSame,label:"อยู่กลุ่มเดิม"},
+                  {arr:"➡",ac:"#92400e",bg:"#fefce8",border:"1px solid #fde68a",n:ppSame,label:"อยู่กลุ่มเดิม"},
                   {arr:"⬇",ac:"#dc2626",bg:"#fff1f2",border:"1px solid #fecdd3",n:ppDown,label:"เลื่อนกลุ่มต่ำลง"},
                 ].map((r,i)=>(
                   <div key={i} style={{background:r.bg,border:r.border,borderRadius:8,padding:"10px 14px",display:"flex",alignItems:"center",gap:12}}>
