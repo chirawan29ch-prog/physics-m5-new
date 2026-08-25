@@ -2420,9 +2420,12 @@ function TeacherScores({students,setStudents}){
 function TeacherGrades({students,setStudents,assignments}){
   const [tabG,setTabG]=useState("score");
   const [maxPP,setMaxPP]=useState(20);
-  const [ppScores,setPpScores]=useState<any>(()=>{
-    const m:any={};students.forEach((s:any)=>{m[s.id]={pre:null,post:null};});return m;
-  });
+  // คะแนน pre/post-test เก็บตรงในตัวนักเรียนแต่ละคน (student.pretest/posttest) แล้วบันทึกทันทีที่แก้
+  // เพื่อให้รอดจากการสลับแท็บ/รีเฟรชหน้า เหมือนข้อมูลอื่นๆ ในระบบ (ไม่ใช่ state ชั่วคราวเหมือนเดิม)
+  function getPP(st:any){return{pre:st.pretest??null,post:st.posttest??null};}
+  function setPP(studentId:string,field:"pretest"|"posttest",value:number|null){
+    setStudents((prev:any)=>prev.map((s:any)=>s.id===studentId?{...s,[field]:value}:s));
+  }
   const [saved,setSaved]=useState(false);
   const [editMid,setEditMid]=useState<any>(()=>{
     const m:any={};students.forEach((s:any)=>{m[s.id]=s.midterm!==null&&s.midterm!==undefined?String(s.midterm):"";});return m;
@@ -2533,7 +2536,7 @@ function TeacherGrades({students,setStudents,assignments}){
       const keys=["g","m","w"];
       const pc=[0,0,0],qc=[0,0,0];
       students.forEach((st:any)=>{
-        const pp=ppScores[st.id]||{};
+        const pp=getPP(st);
         if(pp.pre!==null&&pp.pre!==undefined)pc[keys.indexOf(getPPGroup(pp.pre).key)]++;
         if(pp.post!==null&&pp.post!==undefined)qc[keys.indexOf(getPPGroup(pp.post).key)]++;
       });
@@ -2563,7 +2566,7 @@ function TeacherGrades({students,setStudents,assignments}){
         }
       });
     }
-  },[tabG,students,editMid,editFinal,ppScores,maxPP]);
+  },[tabG,students,editMid,editFinal,maxPP]);
 
   const tabStyleG=(t:string)=>({
     background:tabG===t?"rgba(232,188,85,.12)":"transparent",
@@ -2574,10 +2577,10 @@ function TeacherGrades({students,setStudents,assignments}){
   } as React.CSSProperties);
 
   // ── Pre/Post summary calc ──
-  const ppStudents=students.filter((st:any)=>{const p=ppScores[st.id];return p&&p.pre!==null&&p.post!==null;});
+  const ppStudents=students.filter((st:any)=>{const p=getPP(st);return p&&p.pre!==null&&p.post!==null;});
   let ppUp=0,ppDown=0,ppSame=0;
   ppStudents.forEach((st:any)=>{
-    const p=ppScores[st.id];
+    const p=getPP(st);
     const pk=getPPGroup(p.pre).key,qk=getPPGroup(p.post).key;
     if(pk===qk)ppSame++;
     else if((pk==="w"&&qk!=="w")||(pk==="m"&&qk==="g"))ppUp++;
@@ -2727,7 +2730,7 @@ function TeacherGrades({students,setStudents,assignments}){
               </thead>
               <tbody>
                 {students.map((st:any)=>{
-                  const pp=ppScores[st.id]||{pre:null,post:null};
+                  const pp=getPP(st);
                   const pg=pp.pre!==null?getPPGroup(pp.pre):null;
                   const qg=pp.post!==null?getPPGroup(pp.post):null;
                   const same=pg&&qg&&pg.key===qg.key;
@@ -2742,7 +2745,7 @@ function TeacherGrades({students,setStudents,assignments}){
                         <div style={{display:"inline-flex",alignItems:"center",gap:6}}>
                           {pg&&<div style={{width:14,height:14,borderRadius:"50%",background:pg.bg,flexShrink:0}}></div>}
                           <input type="number" min={0} max={maxPP} value={pp.pre??""} placeholder="—"
-                            onChange={e=>{const v=e.target.value===""?null:Math.min(maxPP,Math.max(0,+e.target.value));setPpScores((p:any)=>({...p,[st.id]:{...p[st.id],pre:v}}));}}
+                            onChange={e=>{const v=e.target.value===""?null:Math.min(maxPP,Math.max(0,+e.target.value));setPP(st.id,"pretest",v);}}
                             style={{width:52,border:"1px solid #d1d5db",borderRadius:5,padding:"4px 6px",fontSize:13,textAlign:"center",color:"#222",background:"#fff",outline:"none"}}/>
                         </div>
                       </td>
@@ -2750,7 +2753,7 @@ function TeacherGrades({students,setStudents,assignments}){
                         <div style={{display:"inline-flex",alignItems:"center",gap:6}}>
                           {qg&&<div style={{width:14,height:14,borderRadius:"50%",background:qg.bg,flexShrink:0}}></div>}
                           <input type="number" min={0} max={maxPP} value={pp.post??""} placeholder="—"
-                            onChange={e=>{const v=e.target.value===""?null:Math.min(maxPP,Math.max(0,+e.target.value));setPpScores((p:any)=>({...p,[st.id]:{...p[st.id],post:v}}));}}
+                            onChange={e=>{const v=e.target.value===""?null:Math.min(maxPP,Math.max(0,+e.target.value));setPP(st.id,"posttest",v);}}
                             style={{width:52,border:"1px solid #d1d5db",borderRadius:5,padding:"4px 6px",fontSize:13,textAlign:"center",color:"#222",background:"#fff",outline:"none"}}/>
                         </div>
                       </td>
