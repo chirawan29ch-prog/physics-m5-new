@@ -2658,7 +2658,7 @@ function TeacherGrades({students,setStudents,assignments}){
             <table style={{width:"100%",borderCollapse:"collapse",minWidth:640}}>
               <thead>
                 <tr style={{borderBottom:"1px solid var(--border)"}}>
-                  {[{h:"ชื่อ",a:"left"},{h:"เก็บก่อนกลาง (เต็ม 875 XP/35)",a:"center"},{h:"กลางภาค (เต็ม 375 XP/15)",a:"center"},{h:"เก็บหลังกลาง (เต็ม 875 XP/35)",a:"center"},{h:"ปลายภาค (เต็ม 375 XP/15)",a:"center"},{h:"รวม (2,500 XP/100)",a:"center"},{h:"เกรด",a:"center"}].map(({h,a},i)=>(
+                  {[{h:"ชื่อ",a:"left"},{h:"เก็บก่อนกลาง /35",a:"center"},{h:"กลางภาค /15",a:"center"},{h:"เก็บหลังกลาง /35",a:"center"},{h:"ปลายภาค /15",a:"center"},{h:"รวม/100",a:"center"},{h:"เกรด",a:"center"}].map(({h,a},i)=>(
                     <th key={i} style={{padding:"8px 12px",textAlign:a as any,fontSize:11,color:"var(--muted)",fontFamily:"'Barlow Condensed',sans-serif",letterSpacing:1}}>{h}</th>
                   ))}
                 </tr>
@@ -2674,27 +2674,23 @@ function TeacherGrades({students,setStudents,assignments}){
                         </span>
                       </td>
                       <td style={{textAlign:"center",padding:"10px 8px"}}>
-                        <span className="mono" style={{fontSize:14,fontWeight:700,color:"#185FA5"}}>{s1*25} XP</span>
-                        <div style={{fontSize:10,color:"var(--muted)"}}>({s1} คะแนน)</div>
+                        <span className="mono" style={{fontSize:15,fontWeight:700,color:"#185FA5"}}>{s1}</span>
                       </td>
                       <td style={{textAlign:"center",padding:"8px"}}>
                         <input type="number" min="0" max="15" value={editMid[s.id]} placeholder="—"
                           onChange={e=>setEditMid((p:any)=>({...p,[s.id]:e.target.value}))}
                           style={{width:56,background:"rgba(14,26,43,.8)",border:"1px solid rgba(94,200,126,.4)",color:"#5DCAA5",borderRadius:5,padding:"5px 6px",fontFamily:"'Share Tech Mono',monospace",fontSize:14,textAlign:"center",outline:"none"}}/>
-                        <div style={{fontSize:10,color:"var(--muted)",marginTop:3}}>{editMid[s.id]?Number(editMid[s.id])*25:0} XP</div>
                       </td>
                       <td style={{textAlign:"center",padding:"10px 8px"}}>
-                        <span className="mono" style={{fontSize:14,fontWeight:700,color:"#f472b6"}}>{s2*25} XP</span>
-                        <div style={{fontSize:10,color:"var(--muted)"}}>({s2} คะแนน)</div>
+                        <span className="mono" style={{fontSize:15,fontWeight:700,color:"#f472b6"}}>{s2}</span>
                       </td>
                       <td style={{textAlign:"center",padding:"8px"}}>
                         <input type="number" min="0" max="15" value={editFinal[s.id]} placeholder="—"
                           onChange={e=>setEditFinal((p:any)=>({...p,[s.id]:e.target.value}))}
                           style={{width:56,background:"rgba(14,26,43,.8)",border:"1px solid rgba(232,140,74,.4)",color:"#e88c4a",borderRadius:5,padding:"5px 6px",fontFamily:"'Share Tech Mono',monospace",fontSize:14,textAlign:"center",outline:"none"}}/>
-                        <div style={{fontSize:10,color:"var(--muted)",marginTop:3}}>{editFinal[s.id]?Number(editFinal[s.id])*25:0} XP</div>
                       </td>
                       <td style={{textAlign:"center",padding:"10px 8px"}}>
-                        {total!==null?<><span className="mono" style={{fontSize:15,fontWeight:700,color:"var(--gold)"}}>{total*25} XP</span><div style={{fontSize:10,color:"var(--muted)"}}>({total} คะแนน)</div></>:<span style={{fontSize:11,color:"var(--muted)"}}>รอกรอก</span>}
+                        {total!==null?<span className="mono" style={{fontSize:16,fontWeight:700,color:"var(--gold)"}}>{total}</span>:<span style={{fontSize:11,color:"var(--muted)"}}>รอกรอก</span>}
                       </td>
                       <td style={{textAlign:"center",padding:"10px 8px"}}>
                         <span className="cond" style={{fontSize:22,fontWeight:900,color:gradeColor(grade)}}>{grade??"—"}</span>
