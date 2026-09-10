@@ -60,6 +60,14 @@ body{background:var(--bg);color:var(--text);font-family:'Noto Sans Thai',sans-se
 select.input option{background:#1e3454}
 .overlay{position:fixed;inset:0;background:rgba(8,18,35,.85);backdrop-filter:blur(8px);z-index:1000;display:flex;align-items:flex-start;justify-content:center;padding:40px 20px;overflow-y:auto}
 .divider{height:1px;background:var(--border);margin:14px 0}
+/* ─── สั่งพิมพ์รายงานทางการ (คะแนนดิบ) — ซ่อนทุกอย่างของเว็บ เหลือแค่ตารางรายงาน ─── */
+@media print{
+  body *{visibility:hidden}
+  #print-report-area,#print-report-area *{visibility:visible}
+  #print-report-area{position:absolute;left:0;top:0;width:100%}
+  .no-print{display:none!important}
+  @page{size:landscape;margin:10mm}
+}
 `;
 
 // ─────────────────────────────────────────────
@@ -759,7 +767,13 @@ function ScoreBreakdown({student, assignments}){
 function StudentDashboard({student,students,assignments,setPage,setStudents}){
   const effXP=getEffectiveXP(student,assignments);
   const rank=getRank(effXP);
-  const submitted=Object.keys(student.submissions||{}).length;
+  // นับ "ส่งแล้ว/ค้างส่ง" อ้างอิงชุดรายการเดียวกับหน้า "ส่งงาน" เป๊ะ (รวมทั้งใบงานที่ต้องส่งไฟล์/ลิงก์ และกิจกรรมในห้องที่ครูให้ XP)
+  const allActNamesD=[...new Set((students||[]).flatMap((st:any)=>(st.xpLog||[]).map((l:any)=>l.activity)))];
+  const totalItemsD=(assignments||[]).length+allActNamesD.length;
+  const doneItemsD=(assignments||[]).filter((a:any)=>student.submissions?.[a.id]).length
+    +allActNamesD.filter((name:any)=>(student.xpLog||[]).some((l:any)=>l.activity===name)).length;
+  const submitted=doneItemsD;
+  const pendingCount=totalItemsD-doneItemsD;
   const [pwModal,setPwModal]=useState(false);
   const [oldPw,setOldPw]=useState("");const [newPw,setNewPw]=useState("");const [cnf,setCnf]=useState("");const [pwMsg,setPwMsg]=useState(null);
   function changePw(){
@@ -819,7 +833,7 @@ function StudentDashboard({student,students,assignments,setPage,setStudents}){
           </div>
           <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(110px,1fr))",gap:8}}>
             <div className="card" style={{textAlign:"center",padding:12}}><div style={{fontSize:22,marginBottom:4}}>📋</div><div className="cond" style={{fontSize:28,fontWeight:700,color:"var(--cyan)"}}>{submitted}</div><div style={{fontSize:11,color:"var(--muted)"}}>ส่งแล้ว</div></div>
-            <div className="card" style={{textAlign:"center",padding:12}}><div style={{fontSize:22,marginBottom:4}}>⏳</div><div className="cond" style={{fontSize:28,fontWeight:700,color:"var(--orange)"}}>{assignments.length-submitted}</div><div style={{fontSize:11,color:"var(--muted)"}}>ค้างส่ง</div></div>
+            <div className="card" style={{textAlign:"center",padding:12}}><div style={{fontSize:22,marginBottom:4}}>⏳</div><div className="cond" style={{fontSize:28,fontWeight:700,color:"var(--orange)"}}>{pendingCount}</div><div style={{fontSize:11,color:"var(--muted)"}}>ค้างส่ง</div></div>
           </div>
         </div>
         <Top3Card students={students} assignments={assignments}/>
@@ -2552,14 +2566,20 @@ function TeacherScores({students,setStudents,assignments}){
 // ─────────────────────────────────────────────
 // TEACHER: GRADES SUMMARY + PRE/POST TEST
 // ─────────────────────────────────────────────
-function TeacherGrades({students,setStudents,assignments}){
+function TeacherGrades({students,setStudents,assignments,studentsLoadOk}){
   const [tabG,setTabG]=useState("score");
   useEffect(()=>{window.scrollTo(0,0);},[tabG]);
   const [maxPP,setMaxPP]=useState(20);
+  // ─── ข้อมูลหัวกระดาษรายงานทางการ (ไม่ได้เก็บในระบบ ให้ครูกรอกเองก่อนพิมพ์แต่ละครั้ง) ───
+  const [rptSchool,setRptSchool]=useState("โรงเรียน..............................................");
+  const [rptSubject,setRptSubject]=useState("รายวิชา.......................................... รหัสวิชา....................");
+  const [rptClass,setRptClass]=useState("ชั้น..........................");
+  const [rptTerm,setRptTerm]=useState("ภาคเรียนที่ .......... ปีการศึกษา ..........");
   // คะแนน pre/post-test เก็บตรงในตัวนักเรียนแต่ละคน (student.pretest/posttest) แล้วบันทึกทันทีที่แก้
   // เพื่อให้รอดจากการสลับแท็บ/รีเฟรชหน้า เหมือนข้อมูลอื่นๆ ในระบบ (ไม่ใช่ state ชั่วคราวเหมือนเดิม)
   function getPP(st:any){return{pre:st.pretest??null,post:st.posttest??null};}
   function setPP(studentId:string,field:"pretest"|"posttest",value:number|null){
+    if(!studentsLoadOk){alert("⚠️ ยังโหลดข้อมูลนักเรียนจริงจากระบบไม่สำเร็จ กรุณารีเฟรชหน้าเว็บใหม่ก่อนแก้ไข (คะแนนนี้จะไม่ถูกบันทึก)");return;}
     setStudents((prev:any)=>prev.map((s:any)=>s.id===studentId?{...s,[field]:value}:s));
   }
   const [saved,setSaved]=useState(false);
@@ -2604,6 +2624,7 @@ function TeacherGrades({students,setStudents,assignments}){
     return{key:"w",bg:"#ef4444"};
   }
   function saveAll(){
+    if(!studentsLoadOk){alert("⚠️ ยังโหลดข้อมูลนักเรียนจริงจากระบบไม่สำเร็จ กรุณารีเฟรชหน้าเว็บใหม่ก่อนแก้ไข (เพื่อป้องกันข้อมูลเสียหาย)");return;}
     setStudents((prev:any)=>prev.map((s:any)=>({
       ...s,
       midterm:editMid[s.id]!==""?Number(editMid[s.id]):null,
@@ -2725,11 +2746,163 @@ function TeacherGrades({students,setStudents,assignments}){
   const ppTotal=ppStudents.length;
   const ppPct=(n:number)=>ppTotal?Math.round(n/ppTotal*1000)/10:0;
 
+  // ─── สร้างคอลัมน์รายการ (ใบงาน + กิจกรรม) แยกตามช่วงก่อน/หลังกลางภาค สำหรับรายงานทางการ ───
+  function buildPhaseItems(phase:string){
+    const phaseAssign=(assignments||[]).filter((a:any)=>(a.phase||"before")===phase);
+    const actNames:string[]=[...new Set((students||[]).flatMap((s:any)=>(s.xpLog||[]).filter((l:any)=>(l.phase||"before")===phase).map((l:any)=>l.activity)))];
+    const assignItems=phaseAssign.map((a:any)=>({
+      key:"a_"+a.id,name:a.title,max:xpToScore(a.xp,9999),
+      score:(s:any)=>{const sub=s.submissions?.[a.id];return sub?.graded?xpToScore(sub.xpEarned,9999):0;}
+    }));
+    const actItems=actNames.map((name:any)=>{
+      const maxXpVal=Math.max(0,...(students||[]).flatMap((s:any)=>(s.xpLog||[]).filter((l:any)=>l.activity===name).map((l:any)=>l.maxXp||l.xp||0)));
+      return{
+        key:"act_"+name,name,max:xpToScore(maxXpVal,9999),
+        score:(s:any)=>{const log=(s.xpLog||[]).find((l:any)=>l.activity===name);return log?xpToScore(log.xp,9999):0;}
+      };
+    });
+    return[...assignItems,...actItems];
+  }
+  // ─── คอลัมน์ที่ครูเพิ่มเอง (ไม่ผูกกับข้อมูลใบงาน/กิจกรรมในระบบ) — กรอกคะแนนแยกเฉพาะสำหรับรายงานนี้ ───
+  const[customCols,setCustomCols]=useState<{key:string,name:string,max:number,phase:string,scores:any}[]>([]);
+  function addCustomCol(phase:string){
+    const key="custom_"+Date.now();
+    setCustomCols(prev=>[...prev,{key,name:"รายการใหม่",max:10,phase,scores:{}}]);
+  }
+  function updateCustomCol(key:string,field:string,value:any){
+    setCustomCols(prev=>prev.map(c=>c.key===key?{...c,[field]:value}:c));
+  }
+  function setCustomScore(key:string,studentId:string,value:string){
+    setCustomCols(prev=>prev.map(c=>c.key===key?{...c,scores:{...c.scores,[studentId]:value}}:c));
+  }
+  function removeCustomCol(key:string){
+    setCustomCols(prev=>prev.filter(c=>c.key!==key));
+  }
+  const beforeItemsAuto=buildPhaseItems("before");
+  const afterItemsAuto=buildPhaseItems("after");
+  const customBeforeItems=customCols.filter(c=>c.phase==="before").map(c=>({key:c.key,name:c.name,max:c.max,score:(s:any)=>Number(c.scores[s.id])||0,isCustom:true}));
+  const customAfterItems=customCols.filter(c=>c.phase==="after").map(c=>({key:c.key,name:c.name,max:c.max,score:(s:any)=>Number(c.scores[s.id])||0,isCustom:true}));
+  const beforeItems=[...beforeItemsAuto,...customBeforeItems];
+  const afterItems=[...afterItemsAuto,...customAfterItems];
+  // ─── จัดลำดับ/ซ่อน-แสดงคอลัมน์รายงานได้เอง — ดีฟอลต์ตามลำดับที่ตรวจพบ แต่ครูปรับเองได้ก่อนพิมพ์แต่ละครั้ง ───
+  const[beforeOrder,setBeforeOrder]=useState<{key:string,visible:boolean}[]>([]);
+  const[afterOrder,setAfterOrder]=useState<{key:string,visible:boolean}[]>([]);
+  const beforeKeysSig=beforeItems.map((it:any)=>it.key).join("|");
+  const afterKeysSig=afterItems.map((it:any)=>it.key).join("|");
+  useEffect(()=>{
+    setBeforeOrder(prev=>{
+      const stillExist=prev.filter(o=>beforeItems.some((it:any)=>it.key===o.key));
+      const existingKeys=new Set(stillExist.map(o=>o.key));
+      const newOnes=beforeItems.filter((it:any)=>!existingKeys.has(it.key)).map((it:any)=>({key:it.key,visible:true}));
+      return[...stillExist,...newOnes];
+    });
+  },[beforeKeysSig]);
+  useEffect(()=>{
+    setAfterOrder(prev=>{
+      const stillExist=prev.filter(o=>afterItems.some((it:any)=>it.key===o.key));
+      const existingKeys=new Set(stillExist.map(o=>o.key));
+      const newOnes=afterItems.filter((it:any)=>!existingKeys.has(it.key)).map((it:any)=>({key:it.key,visible:true}));
+      return[...stillExist,...newOnes];
+    });
+  },[afterKeysSig]);
+  function moveOrder(setFn:any,idx:number,dir:number){
+    setFn((prev:any[])=>{
+      const next=[...prev];
+      const j=idx+dir;
+      if(j<0||j>=next.length)return prev;
+      [next[idx],next[j]]=[next[j],next[idx]];
+      return next;
+    });
+  }
+  function toggleVisible(setFn:any,key:string){
+    setFn((prev:any[])=>prev.map(o=>o.key===key?{...o,visible:!o.visible}:o));
+  }
+  const beforeShown=(beforeOrder.length?beforeOrder:beforeItems.map((it:any)=>({key:it.key,visible:true})))
+    .filter(o=>o.visible).map(o=>beforeItems.find((it:any)=>it.key===o.key)).filter(Boolean);
+  const afterShown=(afterOrder.length?afterOrder:afterItems.map((it:any)=>({key:it.key,visible:true})))
+    .filter(o=>o.visible).map(o=>afterItems.find((it:any)=>it.key===o.key)).filter(Boolean);
+  function subtotal(s:any,items:any[],cap:number){return Math.min(cap,items.reduce((sum,it)=>sum+it.score(s),0));}
+  const rBefore=(s:any)=>subtotal(s,beforeItems,35);
+  const rAfter=(s:any)=>subtotal(s,afterItems,35);
+  const rMid=(s:any)=>s.midterm??0;
+  const rFinal=(s:any)=>s.final??0;
+  const rGrand=(s:any)=>rBefore(s)+rMid(s)+rAfter(s)+rFinal(s);
+  const rGradeOf=(s:any)=>getGrade(rGrand(s));
+  const reportStudents=[...students].sort((a:any,b:any)=>Number(a.password||0)-Number(b.password||0));
+  const rptTh:React.CSSProperties={border:"1px solid #000",padding:"4px 6px",fontSize:16,fontWeight:700,textAlign:"center",background:"#f0f0f0",wordBreak:"normal",overflowWrap:"normal"};
+  const rptTd:React.CSSProperties={border:"1px solid #000",padding:"4px 6px",fontSize:16,textAlign:"center",wordBreak:"normal",overflowWrap:"normal"};
+  // ชื่อรายการใบงาน/กิจกรรมอาจยาว ลดขนาดเหลือ 14 ได้ถ้าตัวใหญ่ไม่พอ แต่ยังต้องตัดคำถูกหลักภาษาไทย (ไม่ตัดกลางคำมั่ว)
+  const rptThItem:React.CSSProperties={border:"1px solid #000",padding:"4px 6px",fontSize:14,fontWeight:700,textAlign:"center",background:"#f0f0f0",wordBreak:"normal",overflowWrap:"normal"};
+  // โทนสีอ่อนสบายตาสำหรับแต่ละช่วงคะแนน (พื้นกระดาษขาว) — ใช้แนวสีเดียวกับตารางคะแนนในหน้าเว็บ แต่จางลงให้เหมาะกับพิมพ์
+  const rptC={before:"#f3e8ff",beforeTot:"#e9d5ff",mid:"#e0f2fe",midTot:"#bfdbfe",after:"#fce7f3",afterTot:"#fbcfe8",final:"#fef9c3",grand:"#fde68a",grade:"#dcfce7"};
+  function tint(base:React.CSSProperties,bg:string):React.CSSProperties{return{...base,background:bg};}
+
+  // ─── ส่งออกรายงานเป็นไฟล์ PowerPoint (.pptx) แก้ไขต่อได้ — โหลดไลบรารีจาก CDN ตอนกดใช้เท่านั้น ไม่กระทบขนาดเว็บปกติ ───
+  function loadPptxGenJS(){
+    return new Promise<any>((resolve,reject)=>{
+      if((window as any).PptxGenJS){resolve((window as any).PptxGenJS);return;}
+      const script=document.createElement("script");
+      script.src="https://cdn.jsdelivr.net/npm/pptxgenjs@3.12.0/dist/pptxgen.bundle.js";
+      script.onload=()=>resolve((window as any).PptxGenJS);
+      script.onerror=()=>reject(new Error("โหลดไลบรารี PowerPoint ไม่สำเร็จ ลองเช็คอินเทอร์เน็ตแล้วลองใหม่"));
+      document.head.appendChild(script);
+    });
+  }
+  async function exportPPTX(){
+    let PptxGenJSCtor:any;
+    try{ PptxGenJSCtor=await loadPptxGenJS(); }
+    catch(e){ alert("โหลดไลบรารี PowerPoint ไม่สำเร็จ — เช็คอินเทอร์เน็ตแล้วลองอีกครั้ง"); return; }
+    const pptx=new PptxGenJSCtor();
+    pptx.defineLayout({name:"WIDE",width:13.33,height:7.5});
+    pptx.layout="WIDE";
+    const headerCells=[
+      {text:"ลำดับ",options:{bold:true,fill:{color:"F0F0F0"},fontSize:9}},
+      {text:"เลขประจำตัว",options:{bold:true,fill:{color:"F0F0F0"},fontSize:9}},
+      {text:"ชื่อ-สกุล",options:{bold:true,fill:{color:"F0F0F0"},fontSize:9}},
+      ...beforeShown.map((it:any)=>({text:`${it.name} (${it.max})`,options:{bold:true,fill:{color:"F3E8FF"},fontSize:8}})),
+      {text:"รวม",options:{bold:true,fill:{color:"E9D5FF"},fontSize:9}},
+      {text:"สอบกลางภาค (15)",options:{bold:true,fill:{color:"E0F2FE"},fontSize:9}},
+      {text:"รวมกลางภาค (50)",options:{bold:true,fill:{color:"BFDBFE"},fontSize:9}},
+      ...afterShown.map((it:any)=>({text:`${it.name} (${it.max})`,options:{bold:true,fill:{color:"FCE7F3"},fontSize:8}})),
+      {text:"รวม",options:{bold:true,fill:{color:"FBCFE8"},fontSize:9}},
+      {text:"สอบปลายภาค (15)",options:{bold:true,fill:{color:"FEF9C3"},fontSize:9}},
+      {text:"รวม (100)",options:{bold:true,fill:{color:"FDE68A"},fontSize:9}},
+      {text:"เกรด",options:{bold:true,fill:{color:"DCFCE7"},fontSize:9}},
+    ];
+    function studentRow(s:any,i:number){
+      return[
+        {text:String(i+1),options:{fontSize:8}},
+        {text:String(s.password),options:{fontSize:8}},
+        {text:s.name,options:{fontSize:8}},
+        ...beforeShown.map((it:any)=>({text:String(it.score(s)),options:{fontSize:8}})),
+        {text:String(rBefore(s)),options:{fontSize:8,bold:true}},
+        {text:String(s.midterm??"—"),options:{fontSize:8}},
+        {text:String(rBefore(s)+rMid(s)),options:{fontSize:8,bold:true}},
+        ...afterShown.map((it:any)=>({text:String(it.score(s)),options:{fontSize:8}})),
+        {text:String(rAfter(s)),options:{fontSize:8,bold:true}},
+        {text:String(s.final??"—"),options:{fontSize:8}},
+        {text:String(rGrand(s)),options:{fontSize:8,bold:true}},
+        {text:String(rGradeOf(s)??"—"),options:{fontSize:8,bold:true}},
+      ];
+    }
+    const rowsPerSlide=18;
+    for(let i=0;i<reportStudents.length;i+=rowsPerSlide){
+      const slide=pptx.addSlide();
+      slide.addText(`${rptSchool} — ${rptSubject}`,{x:0.3,y:0.15,w:12.7,h:0.35,fontSize:14,bold:true,align:"center"});
+      const chunk=reportStudents.slice(i,i+rowsPerSlide);
+      const rows=[headerCells,...chunk.map((s:any,j:number)=>studentRow(s,i+j))];
+      slide.addTable(rows,{x:0.15,y:0.6,w:13.0,h:6.6,fontSize:8,border:{type:"solid",color:"999999",pt:0.5},autoPage:false,colW:undefined});
+    }
+    const stamp=new Date().toLocaleDateString("th-TH",{day:"2-digit",month:"2-digit",year:"numeric"}).replace(/\//g,"-");
+    pptx.writeFile({fileName:`รายงานคะแนน-${stamp}.pptx`});
+  }
+
   return(
     <div className="fade-up" style={{padding:20,maxWidth:1000,margin:"0 auto"}}>
       <div style={{display:"flex",borderBottom:"1px solid var(--border)",marginBottom:20}}>
         <button style={tabStyleG("score")} onClick={()=>setTabG("score")}>📊 คะแนน</button>
         <button style={tabStyleG("prepost")} onClick={()=>setTabG("prepost")}>👥 Pre/Post-test</button>
+        <button style={tabStyleG("report")} onClick={()=>setTabG("report")}>📄 รายงานทางการ</button>
       </div>
 
       {tabG==="score"&&(
@@ -2958,6 +3131,147 @@ function TeacherGrades({students,setStudents,assignments}){
                   </>
                 );
               })()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {tabG==="report"&&(
+        <div>
+          <div className="no-print" style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,padding:16,marginBottom:16}}>
+            <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,marginBottom:12}}>📄 กรอกข้อมูลหัวกระดาษก่อนพิมพ์</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))",gap:10,marginBottom:12}}>
+              {[["ชื่อโรงเรียน",rptSchool,setRptSchool],["รายวิชา / รหัสวิชา",rptSubject,setRptSubject],["ชั้น",rptClass,setRptClass],["ภาคเรียน / ปีการศึกษา",rptTerm,setRptTerm]].map(([l,v,s]:any)=>(
+                <div key={l}>
+                  <label className="mono" style={{fontSize:9,color:"var(--muted)",letterSpacing:1,display:"block",marginBottom:5}}>{l}</label>
+                  <input className="input" value={v} onChange={e=>s(e.target.value)} style={{fontSize:13}}/>
+                </div>
+              ))}
+            </div>
+            <button className="btn btn-gold" onClick={()=>window.print()} style={{fontSize:14,padding:"10px 24px"}}>🖨️ พิมพ์ / บันทึกเป็น PDF</button>
+            <div style={{fontSize:11,color:"var(--muted)",marginTop:8}}>💡 ตารางกว้างมาก แนะนำตั้งค่าพิมพ์เป็นแนวนอน (Landscape) และ "พอดีหน้ากระดาษ" ในหน้าต่างพิมพ์ของเบราว์เซอร์</div>
+          </div>
+
+          <div className="no-print" style={{background:"var(--bg2)",border:"1px solid var(--border)",borderRadius:10,padding:16,marginBottom:16}}>
+            <div className="mono" style={{fontSize:10,color:"var(--muted)",letterSpacing:2,marginBottom:12}}>⚙️ จัดลำดับ/เลือกคอลัมน์ที่จะแสดงในรายงาน (ปรับได้เอง)</div>
+            <div style={{display:"grid",gridTemplateColumns:"repeat(auto-fit,minmax(260px,1fr))",gap:16}}>
+              <div>
+                <div style={{fontSize:12,color:"#a78bfa",marginBottom:8,fontWeight:700}}>🟣 ก่อนกลางภาค</div>
+                {beforeOrder.map((o,i)=>{const it:any=beforeItems.find((x:any)=>x.key===o.key);if(!it)return null;
+                  const isCustom=it.isCustom;const custCol:any=isCustom?customCols.find(c=>c.key===o.key):null;
+                  return(
+                  <div key={o.key} style={{marginBottom:4}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 8px",
+                      background:o.visible?"rgba(167,139,250,.08)":"rgba(255,255,255,.03)",borderRadius:6,opacity:o.visible?1:.5}}>
+                      <input type="checkbox" checked={o.visible} onChange={()=>toggleVisible(setBeforeOrder,o.key)} style={{accentColor:"#a78bfa"}}/>
+                      {isCustom?
+                        <input value={custCol?.name||""} onChange={e=>updateCustomCol(o.key,"name",e.target.value)}
+                          style={{flex:1,fontSize:12,background:"rgba(0,0,0,.2)",border:"1px solid rgba(167,139,250,.3)",borderRadius:4,color:"var(--text)",padding:"3px 6px"}}/>
+                        :<span style={{flex:1,fontSize:12,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.name}</span>}
+                      {isCustom&&<input type="number" value={custCol?.max||0} onChange={e=>updateCustomCol(o.key,"max",Number(e.target.value)||0)}
+                        style={{width:44,fontSize:12,background:"rgba(0,0,0,.2)",border:"1px solid rgba(167,139,250,.3)",borderRadius:4,color:"var(--text)",padding:"3px 4px",textAlign:"center"}}/>}
+                      <button onClick={()=>moveOrder(setBeforeOrder,i,-1)} disabled={i===0} style={{background:"transparent",border:"none",color:"var(--muted2)",cursor:i===0?"default":"pointer",opacity:i===0?.3:1,fontSize:14,padding:"0 4px"}}>▲</button>
+                      <button onClick={()=>moveOrder(setBeforeOrder,i,1)} disabled={i===beforeOrder.length-1} style={{background:"transparent",border:"none",color:"var(--muted2)",cursor:i===beforeOrder.length-1?"default":"pointer",opacity:i===beforeOrder.length-1?.3:1,fontSize:14,padding:"0 4px"}}>▼</button>
+                      {isCustom&&<button onClick={()=>removeCustomCol(o.key)} style={{background:"transparent",border:"none",color:"var(--red)",cursor:"pointer",fontSize:13,padding:"0 4px"}}>🗑</button>}
+                    </div>
+                    {isCustom&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:4,padding:"6px 8px 2px 20px"}}>
+                      {students.map((s:any)=>(
+                        <div key={s.id} style={{display:"flex",alignItems:"center",gap:4}}>
+                          <span style={{fontSize:10,color:"var(--muted2)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name.split(" ").slice(1).join(" ")}</span>
+                          <input type="number" value={custCol?.scores?.[s.id]??""} placeholder="—" onChange={e=>setCustomScore(o.key,s.id,e.target.value)}
+                            style={{width:40,fontSize:11,background:"rgba(0,0,0,.25)",border:"1px solid rgba(167,139,250,.25)",borderRadius:4,color:"#a78bfa",padding:"2px 4px",textAlign:"center"}}/>
+                        </div>
+                      ))}
+                    </div>}
+                  </div>
+                );})}
+                <button onClick={()=>addCustomCol("before")} className="btn-ghost" style={{fontSize:11,padding:"6px 12px",marginTop:6,borderColor:"rgba(167,139,250,.4)",color:"#a78bfa"}}>➕ เพิ่มคอลัมน์เอง</button>
+              </div>
+              <div>
+                <div style={{fontSize:12,color:"#f472b6",marginBottom:8,fontWeight:700}}>🔵 หลังกลางภาค</div>
+                {afterOrder.map((o,i)=>{const it:any=afterItems.find((x:any)=>x.key===o.key);if(!it)return null;
+                  const isCustom=it.isCustom;const custCol:any=isCustom?customCols.find(c=>c.key===o.key):null;
+                  return(
+                  <div key={o.key} style={{marginBottom:4}}>
+                    <div style={{display:"flex",alignItems:"center",gap:6,padding:"5px 8px",
+                      background:o.visible?"rgba(244,114,182,.08)":"rgba(255,255,255,.03)",borderRadius:6,opacity:o.visible?1:.5}}>
+                      <input type="checkbox" checked={o.visible} onChange={()=>toggleVisible(setAfterOrder,o.key)} style={{accentColor:"#f472b6"}}/>
+                      {isCustom?
+                        <input value={custCol?.name||""} onChange={e=>updateCustomCol(o.key,"name",e.target.value)}
+                          style={{flex:1,fontSize:12,background:"rgba(0,0,0,.2)",border:"1px solid rgba(244,114,182,.3)",borderRadius:4,color:"var(--text)",padding:"3px 6px"}}/>
+                        :<span style={{flex:1,fontSize:12,color:"var(--text)",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{it.name}</span>}
+                      {isCustom&&<input type="number" value={custCol?.max||0} onChange={e=>updateCustomCol(o.key,"max",Number(e.target.value)||0)}
+                        style={{width:44,fontSize:12,background:"rgba(0,0,0,.2)",border:"1px solid rgba(244,114,182,.3)",borderRadius:4,color:"var(--text)",padding:"3px 4px",textAlign:"center"}}/>}
+                      <button onClick={()=>moveOrder(setAfterOrder,i,-1)} disabled={i===0} style={{background:"transparent",border:"none",color:"var(--muted2)",cursor:i===0?"default":"pointer",opacity:i===0?.3:1,fontSize:14,padding:"0 4px"}}>▲</button>
+                      <button onClick={()=>moveOrder(setAfterOrder,i,1)} disabled={i===afterOrder.length-1} style={{background:"transparent",border:"none",color:"var(--muted2)",cursor:i===afterOrder.length-1?"default":"pointer",opacity:i===afterOrder.length-1?.3:1,fontSize:14,padding:"0 4px"}}>▼</button>
+                      {isCustom&&<button onClick={()=>removeCustomCol(o.key)} style={{background:"transparent",border:"none",color:"var(--red)",cursor:"pointer",fontSize:13,padding:"0 4px"}}>🗑</button>}
+                    </div>
+                    {isCustom&&<div style={{display:"grid",gridTemplateColumns:"repeat(auto-fill,minmax(140px,1fr))",gap:4,padding:"6px 8px 2px 20px"}}>
+                      {students.map((s:any)=>(
+                        <div key={s.id} style={{display:"flex",alignItems:"center",gap:4}}>
+                          <span style={{fontSize:10,color:"var(--muted2)",flex:1,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{s.name.split(" ").slice(1).join(" ")}</span>
+                          <input type="number" value={custCol?.scores?.[s.id]??""} placeholder="—" onChange={e=>setCustomScore(o.key,s.id,e.target.value)}
+                            style={{width:40,fontSize:11,background:"rgba(0,0,0,.25)",border:"1px solid rgba(244,114,182,.25)",borderRadius:4,color:"#f472b6",padding:"2px 4px",textAlign:"center"}}/>
+                        </div>
+                      ))}
+                    </div>}
+                  </div>
+                );})}
+                <button onClick={()=>addCustomCol("after")} className="btn-ghost" style={{fontSize:11,padding:"6px 12px",marginTop:6,borderColor:"rgba(244,114,182,.4)",color:"#f472b6"}}>➕ เพิ่มคอลัมน์เอง</button>
+              </div>
+            </div>
+            <div style={{fontSize:11,color:"var(--muted)",marginTop:10}}>💡 ติ๊กออกเพื่อซ่อนคอลัมน์นั้นจากรายงาน (ยอดรวม/เกรดยังคำนวณจากทุกรายการเหมือนเดิม ไม่กระทบคะแนนจริง) กด ▲▼ เพื่อสลับลำดับ · คอลัมน์ที่เพิ่มเอง แก้ชื่อ/คะแนนเต็ม/กรอกคะแนนได้ตรงนี้เลย (คะแนนนี้ใช้เฉพาะรายงาน ไม่กระทบ XP ในระบบ)</div>
+            <button className="btn-ghost" onClick={exportPPTX} style={{fontSize:13,padding:"9px 20px",marginTop:12,borderColor:"rgba(232,140,74,.5)",color:"var(--orange)"}}>📊 ดาวน์โหลดเป็น PowerPoint (แก้ไขได้)</button>
+          </div>
+
+          <div id="print-report-area" lang="th" style={{background:"#fff",color:"#000",padding:24,borderRadius:8,overflowX:"auto",fontFamily:"'TH Sarabun PSK',sans-serif",wordBreak:"normal",overflowWrap:"normal",lineBreak:"strict"}}>
+            <div style={{textAlign:"center",marginBottom:4,fontSize:18,fontWeight:700}}>{rptSchool}</div>
+            <div style={{display:"flex",justifyContent:"space-between",fontSize:16,marginBottom:2}}>
+              <span>คะแนนนักเรียน{rptClass}</span><span>{rptTerm}</span>
+            </div>
+            <div style={{textAlign:"left",fontSize:16,marginBottom:14}}>{rptSubject}</div>
+            <table style={{borderCollapse:"collapse",width:"100%",fontSize:16}}>
+              <thead>
+                <tr>
+                  <th rowSpan={2} style={rptTh}>ลำดับ</th>
+                  <th rowSpan={2} style={rptTh}>เลขประจำตัว</th>
+                  <th rowSpan={2} style={{...rptTh,textAlign:"left",whiteSpace:"nowrap"}}>ชื่อ-สกุล</th>
+                  <th colSpan={beforeShown.length+2} style={tint(rptTh,rptC.before)}>ก่อนกลางภาค (35)</th>
+                  <th rowSpan={2} style={tint(rptTh,rptC.mid)}>สอบกลางภาค (15)</th>
+                  <th rowSpan={2} style={tint(rptTh,rptC.midTot)}>รวมกลางภาค (50)</th>
+                  <th colSpan={afterShown.length+1} style={tint(rptTh,rptC.after)}>หลังกลางภาค (35)</th>
+                  <th rowSpan={2} style={tint(rptTh,rptC.final)}>สอบปลายภาค (15)</th>
+                  <th rowSpan={2} style={tint(rptTh,rptC.grand)}>รวม (100)</th>
+                  <th rowSpan={2} style={tint(rptTh,rptC.grade)}>เกรด</th>
+                </tr>
+                <tr>
+                  {beforeShown.map((it:any)=><th key={it.key} style={tint(rptThItem,rptC.before)}>{it.name}<br/>({it.max})</th>)}
+                  <th style={tint(rptTh,rptC.beforeTot)}>รวม</th>
+                  {afterShown.map((it:any)=><th key={it.key} style={tint(rptThItem,rptC.after)}>{it.name}<br/>({it.max})</th>)}
+                  <th style={tint(rptTh,rptC.afterTot)}>รวม</th>
+                </tr>
+              </thead>
+              <tbody>
+                {reportStudents.map((s:any,i:number)=>(
+                  <tr key={s.id}>
+                    <td style={rptTd}>{i+1}</td>
+                    <td style={rptTd}>{s.password}</td>
+                    <td style={{...rptTd,textAlign:"left",whiteSpace:"nowrap"}}>{s.name}</td>
+                    {beforeShown.map((it:any)=><td key={it.key} style={tint(rptTd,rptC.before)}>{it.score(s)}</td>)}
+                    <td style={tint({...rptTd,fontWeight:700},rptC.beforeTot)}>{rBefore(s)}</td>
+                    <td style={tint(rptTd,rptC.mid)}>{s.midterm??"—"}</td>
+                    <td style={tint({...rptTd,fontWeight:700},rptC.midTot)}>{rBefore(s)+rMid(s)}</td>
+                    {afterShown.map((it:any)=><td key={it.key} style={tint(rptTd,rptC.after)}>{it.score(s)}</td>)}
+                    <td style={tint({...rptTd,fontWeight:700},rptC.afterTot)}>{rAfter(s)}</td>
+                    <td style={tint(rptTd,rptC.final)}>{s.final??"—"}</td>
+                    <td style={tint({...rptTd,fontWeight:700},rptC.grand)}>{rGrand(s)}</td>
+                    <td style={tint({...rptTd,fontWeight:700},rptC.grade)}>{rGradeOf(s)??"—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+            <div style={{display:"flex",justifyContent:"center",marginTop:60,fontSize:16}}>
+              <div style={{textAlign:"center"}}>ลงชื่อ..........................................ผู้สอน<br/><br/>(..........................................)</div>
             </div>
           </div>
         </div>
@@ -3475,7 +3789,7 @@ export default function App(){
           {role==="teacher"&&page==="t-resources"  &&<TeacherResources resources={resources} setResources={setResources}/>}
           {role==="teacher"&&page==="t-scores"     &&<TeacherScores students={students} setStudents={setStudents} assignments={assignments}/>}
           {role==="teacher"&&page==="t-exam"       &&<TeacherExamScores students={students} setStudents={setStudents}/>}
-          {role==="teacher"&&page==="t-grades"     &&<TeacherGrades students={students} setStudents={setStudents} assignments={assignments}/>}
+          {role==="teacher"&&page==="t-grades"     &&<TeacherGrades students={students} setStudents={setStudents} assignments={assignments} studentsLoadOk={studentsLoadOk}/>}
           {role==="teacher"&&page==="t-airdrop"    &&<TeacherAirdrop students={students} setPendingAirdrop={setPendingAirdrop} setStudents={setStudents}/>}
           {role==="teacher"&&page==="ranking"      &&<RankingPage students={students} myId={undefined} isTeacher={true} assignments={assignments}/>}
         </main>
