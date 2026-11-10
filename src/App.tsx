@@ -171,7 +171,7 @@ function PhysicsDayBackground(){
   return(
     <div style={{position:"fixed",inset:0,zIndex:0,pointerEvents:"none",overflow:"hidden"}}>
       <div style={{position:"absolute",inset:0,
-        backgroundImage:`url("${PHYSICS_IMG_DAY}")`,
+        backgroundImage:`url("${LOGIN_IMG}")`,
         backgroundSize:"cover",backgroundPosition:"center",backgroundRepeat:"no-repeat"}}/>
       <div style={{position:"absolute",inset:0,background:"rgba(10,20,45,.32)"}}/>
       {PHYSICS_FORMULAS.slice(0,5).map((f,i)=>(
@@ -567,9 +567,9 @@ function LoginScreen({students,onLogin}){
           <div style={{display:"flex",gap:14,justifyContent:"center",fontSize:52,marginBottom:12,animation:"float 3s ease-in-out infinite"}}>
             <span>⚡</span><span>🔥</span><span>💧</span>
           </div>
-          <div className="cond" style={{fontSize:56,fontWeight:900,letterSpacing:6,color:"var(--gold2)",lineHeight:1,textShadow:"0 0 40px rgba(232,188,85,.6)"}}>PHYSICS</div>
-          <div className="cond" style={{fontSize:22,fontWeight:600,letterSpacing:14,color:"var(--muted2)",marginTop:2}}>BATTLEGROUND</div>
-          <div className="mono" style={{fontSize:11,color:"var(--muted)",marginTop:8,letterSpacing:3}}>── QUANTUM SEASON 2568 ──</div>
+          <div className="cond" style={{fontSize:56,fontWeight:900,letterSpacing:6,color:"var(--gold2)",lineHeight:1,textShadow:"0 0 40px rgba(232,188,85,.6)"}}>PHYSCORE</div>
+          <div className="cond" style={{fontSize:22,fontWeight:600,letterSpacing:14,color:"var(--muted2)",marginTop:2}}>ARENA</div>
+          <div className="mono" style={{fontSize:11,color:"var(--muted)",marginTop:8,letterSpacing:3}}>── PHYSICS · 2569 ──</div>
           {SETTINGS.subject&&<div style={{fontSize:22,fontWeight:700,marginTop:14,color:"var(--gold2)",textShadow:"0 0 20px rgba(0,0,0,.35)"}}>📘 {SETTINGS.subject}</div>}
           {SETTINGS.termLabel&&SETTINGS.subject&&<div style={{fontSize:13,color:"var(--muted2)",marginTop:2}}>{SETTINGS.termLabel}</div>}
         </div>
@@ -604,7 +604,7 @@ function LoginScreen({students,onLogin}){
             <button className="btn btn-gold" onClick={doLogin} style={{marginTop:4}}>▶  DEPLOY INTO ZONE</button>
           </div>
           <div style={{height:1,background:"var(--border)",margin:"14px 0"}}/>
-          <div className="mono" style={{fontSize:10,color:"var(--muted)",textAlign:"center",letterSpacing:1}}>PHYSICS BATTLEGROUND © 2568 · QUANTUM EDITION</div>
+          <div className="mono" style={{fontSize:10,color:"var(--muted)",textAlign:"center",letterSpacing:1}}>PHYSCORE ARENA © 2569 · ม.5/1</div>
         </div>
       </div>
     </div>
@@ -622,8 +622,7 @@ function TopNav({user,role,page,setPage,onLogout,assignments,studentsLoadOk}){
     <div style={{position:"sticky",top:0,zIndex:100,background:"rgba(12,24,42,.96)",backdropFilter:"blur(20px)",borderBottom:"1px solid var(--border)"}}>
       <div style={{maxWidth:1200,margin:"0 auto",padding:"8px 16px"}}>
         <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:10,flexWrap:"wrap"}}>
-          <div className="cond" style={{fontSize:"clamp(16px,4vw,20px)",fontWeight:900,color:"var(--gold)",letterSpacing:2,flexShrink:0,whiteSpace:"nowrap",textShadow:"0 0 18px rgba(232,188,85,.5)"}}>⚡ PHYS·BG</div>
-          <span className="mono" title="ห้อง / วิชา / เทอมที่ระบบกำลังใช้อยู่" style={{fontSize:12,fontWeight:600,color:"var(--text)",letterSpacing:.5,flex:"1 1 auto",minWidth:0,overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>{ROOM_LABEL}{SETTINGS.subject?` · ${SETTINGS.subject}`:""} · {SETTINGS.termLabel}</span>
+          <div className="cond" style={{fontSize:"clamp(16px,4vw,20px)",fontWeight:900,color:"var(--gold)",letterSpacing:2,flexShrink:0,whiteSpace:"nowrap",textShadow:"0 0 18px rgba(232,188,85,.5)"}}>⚡ PHYSCORE</div>
           <div style={{display:"flex",alignItems:"center",gap:8,flexShrink:0}}>
             {role==="teacher"&&(
               <span title={studentsLoadOk?"เชื่อมต่อฐานข้อมูลสำเร็จ — บันทึกได้ตามปกติ":"⚠️ ยังไม่ได้เชื่อมต่อข้อมูลนักเรียนจริง — การแก้ไขใดๆ ตอนนี้จะไม่ถูกบันทึก! ลองรีเฟรชหน้าใหม่"}
@@ -3677,6 +3676,9 @@ function TeacherAirdrop({students,setPendingAirdrop,setStudents,studentsLoadOk})
 // GOOGLE APPS SCRIPT API — แก้ไขแล้ว
 // ─────────────────────────────────────────────
 const GAS_URL = "https://script.google.com/macros/s/AKfycbwXtFzTVHNA-d5GZ7ebn9yk_a0DiPkOhHVseB1EakGnWsB3IiET2rBzm19aA8f7lQpR/exec";
+// ภาพหน้า login และชื่อบนแท็บเบราว์เซอร์
+const LOGIN_IMG = "https://soulout-studio.neocities.org/images/Mzt6T7c.jpg";
+if(typeof document!=="undefined")document.title="PhyScore Arena ม.5";
 // ─────────────────────────────────────────────
 // ระบบหลายเทอม — แต่ละเทอมมีข้อมูลครบชุดของตัวเอง (นักเรียน/งาน/ไฟล์) ไม่ปะปนกัน
 // ใช้ร่วมกันทุกห้อง (ต่างกันแค่ ROOM_ID / ROOM_LABEL)
@@ -3947,7 +3949,7 @@ function TermBar({termList,teacherTermId,studentTermId,onSwitch}:any){
   return(
     <div className="no-print" style={{margin:"0 20px 12px",padding:"9px 14px",borderRadius:8,display:"flex",gap:10,flexWrap:"wrap",alignItems:"center",justifyContent:"space-between",fontSize:13,
       background:same?"rgba(94,200,126,.10)":"rgba(232,188,85,.14)",border:`1px solid ${same?"rgba(94,200,126,.4)":"rgba(232,188,85,.6)"}`}}>
-    <div>📚 กำลังทำงานในเทอม: <b>{(cur&&cur.label)||SETTINGS.termLabel}</b>{cur&&cur.subject?` · ${cur.subject}`:""}
+    <div>📚 ห้อง {ROOM_LABEL} · กำลังทำงานในเทอม: <b>{(cur&&cur.label)||SETTINGS.termLabel}</b>{cur&&cur.subject?` · ${cur.subject}`:""}
       <span style={{margin:"0 8px",opacity:.5}}>|</span>
       {same?<span style={{color:"var(--green)"}}>👩‍🎓 นักเรียนเห็นเทอมนี้อยู่</span>
         :<span style={{color:"#f5cc70"}}>⚠️ นักเรียนกำลังเห็น <b>{stu?stu.label:studentTermId}</b> (ไม่ใช่เทอมนี้ — สิ่งที่แก้ตรงนี้นักเรียนยังไม่เห็น)</span>}
@@ -4248,8 +4250,11 @@ export default function App(){
         if(Array.isArray(data.resources)){lastLoadedRef.current.resources=data.resources;setResources(data.resources);setResourcesLoadOk(true);}
         // ยืนยันว่าดึงมาสำเร็จจริงด้วย Array.isArray (ไม่ใช่แค่เช็ค length>0) — array ว่างเปล่าก็ถือว่า "ดึงสำเร็จ" เหมือนกัน
         if(Array.isArray(data.students)){
-          lastLoadedRef.current.students=data.students;
-          setStudents(data.students);setStudentsLoadOk(true);
+          // ระบบใหม่ที่ยังไม่เคยมีข้อมูลนักเรียนใน Sheet เลย → ใช้รายชื่อตั้งต้นในโค้ด แล้วให้ auto-save เขียนลง Sheet ครั้งแรก
+          const seedNow=!!data.studentsFresh&&data.students.length===0&&INIT_STUDENTS.length>0;
+          const stu=seedNow?INIT_STUDENTS:data.students;
+          if(!seedNow)lastLoadedRef.current.students=data.students;
+          setStudents(stu);setStudentsLoadOk(true);
           setDataLoadOk(true);setLoaded(true);
           return;
         }
@@ -4405,9 +4410,10 @@ export default function App(){
     }
     SESSION.term=termId;
     applyTermMeta(data.settings&&data.settings.termMeta);
-    lastLoadedRef.current={students:data.students,assignments:data.assignments,resources:data.resources};
+    const seedNow=!!data.studentsFresh&&data.students.length===0&&INIT_STUDENTS.length>0;
+    lastLoadedRef.current={students:seedNow?null:data.students,assignments:data.assignments,resources:data.resources};
     skipAutoSaveRef.current=false;
-    setStudents(data.students);setAssignments(data.assignments);setResources(data.resources);
+    setStudents(seedNow?INIT_STUDENTS:data.students);setAssignments(data.assignments);setResources(data.resources);
     setStudentsLoadOk(true);setAssignmentsLoadOk(true);setResourcesLoadOk(true);setDataLoadOk(true);setLoaded(true);
     if(data.settings){
       if(Array.isArray(data.settings.terms))setTermList(data.settings.terms);
